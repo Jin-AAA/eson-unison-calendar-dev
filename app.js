@@ -1,16 +1,9 @@
-const GOOGLE_API_KEY = 'AIzaSyB2IyH68acpouxGzSXHt-HjymBhTiH5WGk';
-const GOOGLE_CALENDAR_ID = '6970656de035289ab094f0770ae9de1a5dd71d4f05728ea519fb3f9fdbba7927@group.calendar.google.com';
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyB-zKGQ4NNNnRh-BMep97o66iSR7juKVoY',
-  authDomain: 'eson-unison-calendar-cd2f9.firebaseapp.com',
-  projectId: 'eson-unison-calendar-cd2f9',
-  storageBucket: 'eson-unison-calendar-cd2f9.firebasestorage.app',
-  messagingSenderId: '672800291334',
-  appId: '1:672800291334:web:818338c46b659531bfe187',
-  measurementId: 'G-XDER4CP7WP'
-};
-const FIREBASE_VAPID_KEY = 'BNw9it2f72zhRwIbAJOpFtkqRJskjUBY8UlquoCbOR7b-jzfAU4ZwA6smGH2F273gHgj6DG1H5MCw5zve3V7kuM';
+const APP_CONFIG = window.APP_CONFIG || {};
+const GOOGLE_API_KEY = APP_CONFIG.GOOGLE_API_KEY;
+const GOOGLE_CALENDAR_ID = APP_CONFIG.GOOGLE_CALENDAR_ID;
+const firebaseConfig = APP_CONFIG.FIREBASE_CONFIG;
+const FIREBASE_VAPID_KEY = APP_CONFIG.FIREBASE_VAPID_KEY;
+const TOKEN_COLLECTION = APP_CONFIG.TOKEN_COLLECTION || 'tokens';
 let deferredInstallPrompt = null;
 let swRegistration = null;
 let messaging = null;
@@ -813,7 +806,7 @@ async function saveFcmToken(token) {
   if (!db) throw new Error('Firestore is not initialized.');
 
   const tokenHash = await sha256Hex(token);
-  const ref = db.collection('tokens-dev').doc(tokenHash);
+  const ref = db.collection(TOKEN_COLLECTION).doc(tokenHash);
   const now = firebase.firestore.FieldValue.serverTimestamp();
   const existingToken = localStorage.getItem('esonUnisonFcmToken');
 
