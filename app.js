@@ -1,5 +1,5 @@
 const GOOGLE_API_KEY = 'AIzaSyB2IyH68acpouxGzSXHt-HjymBhTiH5WGk';
-const GOOGLE_CALENDAR_ID = '4ba0e8a1b31f1a821edc4aec49773111113ca7a0ab1080b4923500db0e382534@group.calendar.google.com';
+const GOOGLE_CALENDAR_ID = '6970656de035289ab094f0770ae9de1a5dd71d4f05728ea519fb3f9fdbba7927@group.calendar.google.com';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyB-zKGQ4NNNnRh-BMep97o66iSR7juKVoY',
@@ -813,7 +813,7 @@ async function saveFcmToken(token) {
   if (!db) throw new Error('Firestore is not initialized.');
 
   const tokenHash = await sha256Hex(token);
-  const ref = db.collection('tokens').doc(tokenHash);
+  const ref = db.collection('tokens-dev').doc(tokenHash);
   const now = firebase.firestore.FieldValue.serverTimestamp();
   const existingToken = localStorage.getItem('esonUnisonFcmToken');
 
