@@ -549,7 +549,9 @@ button {
 @media (max-width: 880px) {
   .hero-card { flex-direction: column; padding: 26px; }
   .hero-actions { align-items: flex-start; min-width: 0; }
-  .meta-row { grid-template-columns: 1fr; }
+  /*.meta-row { grid-template-columns: 1fr; }*/
+  .mini-card span {margin-bottom:2px;}
+  .mini-card strong {font-size:14px;}
   .day-cell { padding: 9px; border-radius: 18px; }
   .calendar-panel { padding: 16px; }
   .weekday-grid, .calendar-grid { gap: 6px; }
