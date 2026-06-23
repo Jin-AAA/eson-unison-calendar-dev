@@ -217,7 +217,6 @@ const modal = document.getElementById('eventModal');
 const appModal = document.getElementById('appModal');
 const appModalTitle = document.getElementById('appModalTitle');
 const appModalMessage = document.getElementById('appModalMessage');
-const appModalOk = document.getElementById('appModalOk');
 const eventListView = document.getElementById('eventListView');
 const viewToggleBtn = document.getElementById('viewToggleBtn');
 const calendarPanel = document.querySelector('.calendar-panel');
@@ -263,7 +262,6 @@ function showAppModal(title, message) {
   }
   appModalTitle.textContent = title || '';
   appModalMessage.innerHTML = formatModalMessage(message || '');
-  appModalOk.textContent = i18n[currentLang].modalOk || 'OK';
   appModal.showModal();
 }
 
@@ -670,7 +668,6 @@ viewToggleBtn.addEventListener('click', () => {
 });
 
 document.getElementById('closeModal').addEventListener('click', () => modal.close());
-if (appModalOk) appModalOk.addEventListener('click', () => appModal.close());
 const appModalClose = document.getElementById('appModalClose');
 if (appModalClose) appModalClose.addEventListener('click', () => appModal.close());
 
@@ -699,7 +696,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=18', { scope: './' });
+    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=26', { scope: './' });
     console.log('Service Worker registered:', swRegistration.scope);
     return swRegistration;
   } catch (error) {
