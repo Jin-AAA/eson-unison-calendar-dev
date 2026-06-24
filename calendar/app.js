@@ -41,6 +41,8 @@ const i18n = {
     installGuideIos: '1. 點擊 Safari 的「分享」\n2. 選擇「加入主畫面」\n3. 從主畫面開啟 App\n4. 再點擊「接收通知」',
     installGuideAndroid: '1. 點擊 Chrome 選單（⋮）\n2. 選擇「加入主畫面」\n3. 選擇「安裝應用程式」\n4. 從安裝後的 App 開啟\n5. 再點擊「接收通知」\n\n※ 請勿選擇「建立捷徑」',
     installGuideGeneric: '請先將網頁加入主畫面後，再從主畫面開啟並接收通知。',
+    desktopNotificationTitle: '請使用手機設定通知',
+    desktopNotificationMessage: '通知功能主要提供手機推播提醒。\n\n請使用手機開啟網站，並將網頁加入主畫面後，再開啟通知功能。',
     errorTitle: '發生錯誤',
     allDay: '整天',
     followEson: 'follow ESON',
@@ -81,6 +83,8 @@ const i18n = {
     installGuideIos: '1. Safari의 공유 버튼을 누르세요\n2. 「홈 화면에 추가」를 선택하세요\n3. 홈 화면에서 App을 다시 여세요\n4. 다시 「알림 받기」를 눌러 주세요',
     installGuideAndroid: '1. Chrome 메뉴(⋮)를 누르세요\n2. 「홈 화면에 추가」를 선택하세요\n3. 「앱 설치」를 선택하세요\n4. 설치된 App에서 다시 여세요\n5. 다시 「알림 받기」를 눌러 주세요\n\n※ 「바로가기 추가」가 아닌 「앱 설치」를 선택해 주세요',
     installGuideGeneric: '알림을 받으려면 먼저 이 페이지를 홈 화면에 추가한 뒤 다시 열어 주세요.',
+    desktopNotificationTitle: '휴대폰에서 알림을 설정해 주세요',
+    desktopNotificationMessage: '알림 기능은 주로 휴대폰 푸시 알림을 위한 기능입니다.\n\n휴대폰에서 사이트를 열고 홈 화면에 추가한 뒤 알림을 설정해 주세요.',
     errorTitle: '오류가 발생했습니다',
     allDay: '종일',
     followEson: 'follow ESON',
@@ -121,6 +125,8 @@ const i18n = {
     installGuideIos: '1. Tap the Safari Share button\n2. Choose “Add to Home Screen”\n3. Open the app from your Home Screen\n4. Tap “Receive notifications” again',
     installGuideAndroid: '1. Tap the Chrome menu (⋮)\n2. Choose “Add to Home screen”\n3. Choose “Install app”\n4. Open the installed app\n5. Tap “Receive notifications” again\n\n※ Please choose “Install app”, not “Create shortcut”.',
     installGuideGeneric: 'Please add this page to your Home Screen, then open it from there to receive notifications.',
+    desktopNotificationTitle: 'Please set up notifications on your phone',
+    desktopNotificationMessage: 'Notifications are mainly designed for mobile push alerts.\n\nPlease open this site on your phone, add it to your Home Screen, then enable notifications.',
     errorTitle: 'Something went wrong',
     allDay: 'All day',
     followEson: 'follow ESON',
@@ -161,6 +167,8 @@ const i18n = {
     installGuideIos: '1. Safari の共有ボタンをタップ\n2. 「ホーム画面に追加」を選択\n3. ホーム画面から App を開く\n4. もう一度「通知を受け取る」をタップ',
     installGuideAndroid: '1. Chrome メニュー（⋮）をタップ\n2. 「ホーム画面に追加」を選択\n3. 「アプリをインストール」を選択\n4. インストール後の App から開く\n5. もう一度「通知を受け取る」をタップ\n\n※ 「ショートカットを作成」ではなく「アプリをインストール」を選択してください',
     installGuideGeneric: '通知を受け取るには、先にこのページをホーム画面に追加してから開いてください。',
+    desktopNotificationTitle: 'スマートフォンで通知を設定してください',
+    desktopNotificationMessage: '通知機能は主にスマートフォンのプッシュ通知用です。\n\nスマートフォンでこのサイトを開き、ホーム画面に追加してから通知を設定してください。',
     errorTitle: 'エラーが発生しました',
     allDay: '終日',
     followEson: 'follow ESON',
@@ -271,6 +279,13 @@ function showInstallGuideModal() {
   if (platform === 'iOS / iPadOS') message = i18n[currentLang].installGuideIos;
   if (platform === 'Android') message = i18n[currentLang].installGuideAndroid;
   showAppModal(i18n[currentLang].installGuideTitle, message);
+}
+
+function showDesktopNotificationGuideModal() {
+  showAppModal(
+    i18n[currentLang].desktopNotificationTitle,
+    i18n[currentLang].desktopNotificationMessage
+  );
 }
 
 function stripHtml(value = '') {
@@ -787,7 +802,8 @@ function getDevicePlatform() {
 
 function isMobileDevice() {
   const ua = navigator.userAgent || '';
-  return /iPhone|iPad|iPod|Android/i.test(ua);
+  const isTouchMac = /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
+  return /iPhone|iPad|iPod|Android/i.test(ua) || isTouchMac;
 }
 
 function isInstalledWebApp() {
@@ -835,7 +851,12 @@ async function saveFcmToken(token) {
 async function enableNotifications() {
   const isSecureContextForPush = window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
-  if (isMobileDevice() && !isInstalledWebApp()) {
+  if (!isMobileDevice()) {
+    showDesktopNotificationGuideModal();
+    return;
+  }
+
+  if (!isInstalledWebApp()) {
     showInstallGuideModal();
     return;
   }
