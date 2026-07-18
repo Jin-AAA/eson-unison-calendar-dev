@@ -711,7 +711,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=26', { scope: './' });
+    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=27', { scope: './' });
     console.log('Service Worker registered:', swRegistration.scope);
     return swRegistration;
   } catch (error) {
@@ -821,7 +821,6 @@ async function saveFcmToken(token) {
   const tokenHash = await sha256Hex(token);
   const ref = db.collection(TOKEN_COLLECTION).doc(tokenHash);
   const now = firebase.firestore.FieldValue.serverTimestamp();
-  const existingToken = localStorage.getItem('esonUnisonFcmToken');
 
   await ref.set({
     token,
@@ -835,15 +834,9 @@ async function saveFcmToken(token) {
     pageUrl: location.href,
     permission: Notification.permission,
     enabled: true,
-    createdAt: existingToken === token ? firebase.firestore.FieldValue.delete() : now,
+    createdAt: now,
     updatedAt: now
-  }, { merge: true });
-
-  // Ensure createdAt exists for existing devices that registered before v14.
-  const snap = await ref.get();
-  if (!snap.exists || !snap.data().createdAt) {
-    await ref.set({ createdAt: now }, { merge: true });
-  }
+  });
 
   return tokenHash;
 }

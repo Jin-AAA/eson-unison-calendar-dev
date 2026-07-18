@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isValidToken(tokenId) {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'token', 'tokenHash', 'project', 'platform', 'userAgent',
+          'language', 'browserLanguage', 'timezone', 'pageUrl',
+          'permission', 'enabled', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'token', 'tokenHash', 'project', 'platform', 'userAgent',
+          'language', 'browserLanguage', 'timezone', 'pageUrl',
+          'permission', 'enabled', 'createdAt', 'updatedAt'
+        ])
+        && tokenId.matches('^[0-9a-f]{64}$')
+        && data.tokenHash == tokenId
+        && data.token is string
+        && data.token.size() >= 20
+        && data.token.size() <= 4096
+        && data.project == 'ESON × UNISON Calendar'
+        && data.platform in ['iOS / iPadOS', 'Android', 'macOS', 'Windows', 'Unknown']
+        && data.userAgent is string
+        && data.userAgent.size() <= 1024
+        && data.language in ['zh', 'ko', 'ja', 'en']
+        && data.browserLanguage is string
+        && data.browserLanguage.size() <= 100
+        && data.timezone is string
+        && data.timezone.size() <= 100
+        && data.pageUrl is string
+        && data.pageUrl.size() <= 2048
+        && data.permission == 'granted'
+        && data.enabled == true
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    match /tokens/{tokenId} {
+      allow create, update: if isValidToken(tokenId);
+      allow read, delete: if false;
+    }
+
+    match /tokens-dev/{tokenId} {
+      allow create, update: if isValidToken(tokenId);
+      allow read, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
