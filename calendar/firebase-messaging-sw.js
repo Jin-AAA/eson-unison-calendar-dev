@@ -1,5 +1,5 @@
 /* ESON × UNISON Calendar Firebase Messaging Service Worker
-   v28 */
+   v29 */
 
 // Keep this handler before the Firebase imports so notification taps always
 // use the calendar's own navigation behavior.

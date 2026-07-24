@@ -838,7 +838,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=28', { scope: './' });
+    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=29', { scope: './' });
     console.log('Service Worker registered:', swRegistration.scope);
     return swRegistration;
   } catch (error) {
