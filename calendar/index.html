@@ -108,11 +108,30 @@
     <p id="appModalMessage">—</p>
   </dialog>
 
+  <dialog class="today-events-modal" id="todayEventsModal">
+    <button class="modal-close today-events-close" id="todayEventsClose" type="button" aria-label="Close">
+      <span class="material-symbols-rounded" aria-hidden="true">close</span>
+    </button>
+    <div class="today-events-heading">
+      <span class="today-events-icon material-symbols-rounded" aria-hidden="true">today</span>
+      <div>
+        <p class="today-events-kicker" data-i18n="todayEventsKicker">TODAY</p>
+        <h3 data-i18n="todayEventsTitle">今天有什麼事件？</h3>
+        <p class="today-events-date" id="todayEventsDate">—</p>
+      </div>
+    </div>
+    <div class="today-events-list" id="todayEventsList"></div>
+    <div class="today-events-actions">
+      <button class="today-events-btn secondary" id="todayEventsDismissToday" type="button" data-i18n="todayEventsDismissToday">今日不再查看</button>
+      <button class="today-events-btn primary" id="todayEventsCloseButton" type="button" data-i18n="todayEventsClose">直接關閉</button>
+    </div>
+  </dialog>
+
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="config.js?v=27"></script>
-  <script src="app.js?v=27"></script>
+  <script src="config.js?v=28"></script>
+  <script src="app.js?v=28"></script>
 </body>
 </html>

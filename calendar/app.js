@@ -43,6 +43,10 @@ const i18n = {
     installGuideGeneric: '請先將網頁加入主畫面後，再從主畫面開啟並接收通知。',
     desktopNotificationTitle: '請使用手機設定通知',
     desktopNotificationMessage: '通知功能主要提供手機推播提醒。\n\n請使用手機開啟網站，並將網頁加入主畫面後，再開啟通知功能。',
+    todayEventsKicker: 'TODAY',
+    todayEventsTitle: '今天有什麼事件？',
+    todayEventsClose: '直接關閉',
+    todayEventsDismissToday: '今日不再查看',
     errorTitle: '發生錯誤',
     allDay: '整天',
     followEson: 'follow ESON',
@@ -85,6 +89,10 @@ const i18n = {
     installGuideGeneric: '알림을 받으려면 먼저 이 페이지를 홈 화면에 추가한 뒤 다시 열어 주세요.',
     desktopNotificationTitle: '휴대폰에서 알림을 설정해 주세요',
     desktopNotificationMessage: '알림 기능은 주로 휴대폰 푸시 알림을 위한 기능입니다.\n\n휴대폰에서 사이트를 열고 홈 화면에 추가한 뒤 알림을 설정해 주세요.',
+    todayEventsKicker: 'TODAY',
+    todayEventsTitle: '오늘은 어떤 일정이 있나요?',
+    todayEventsClose: '닫기',
+    todayEventsDismissToday: '오늘 다시 보지 않기',
     errorTitle: '오류가 발생했습니다',
     allDay: '종일',
     followEson: 'follow ESON',
@@ -127,6 +135,10 @@ const i18n = {
     installGuideGeneric: 'Please add this page to your Home Screen, then open it from there to receive notifications.',
     desktopNotificationTitle: 'Please set up notifications on your phone',
     desktopNotificationMessage: 'Notifications are mainly designed for mobile push alerts.\n\nPlease open this site on your phone, add it to your Home Screen, then enable notifications.',
+    todayEventsKicker: 'TODAY',
+    todayEventsTitle: 'What’s happening today?',
+    todayEventsClose: 'Close',
+    todayEventsDismissToday: 'Don’t show again today',
     errorTitle: 'Something went wrong',
     allDay: 'All day',
     followEson: 'follow ESON',
@@ -169,6 +181,10 @@ const i18n = {
     installGuideGeneric: '通知を受け取るには、先にこのページをホーム画面に追加してから開いてください。',
     desktopNotificationTitle: 'スマートフォンで通知を設定してください',
     desktopNotificationMessage: '通知機能は主にスマートフォンのプッシュ通知用です。\n\nスマートフォンでこのサイトを開き、ホーム画面に追加してから通知を設定してください。',
+    todayEventsKicker: 'TODAY',
+    todayEventsTitle: '今日の予定は？',
+    todayEventsClose: '閉じる',
+    todayEventsDismissToday: '今日はもう表示しない',
     errorTitle: 'エラーが発生しました',
     allDay: '終日',
     followEson: 'follow ESON',
@@ -225,6 +241,9 @@ const modal = document.getElementById('eventModal');
 const appModal = document.getElementById('appModal');
 const appModalTitle = document.getElementById('appModalTitle');
 const appModalMessage = document.getElementById('appModalMessage');
+const todayEventsModal = document.getElementById('todayEventsModal');
+const todayEventsDate = document.getElementById('todayEventsDate');
+const todayEventsList = document.getElementById('todayEventsList');
 const eventListView = document.getElementById('eventListView');
 const viewToggleBtn = document.getElementById('viewToggleBtn');
 const calendarPanel = document.querySelector('.calendar-panel');
@@ -249,6 +268,8 @@ const categoryFallbackColor = {
   travel: fallbackColors.mint,
   release: fallbackColors.orangered
 };
+
+const TODAY_EVENTS_HIDDEN_KEY = 'esonUnisonTodayEventsHiddenDate';
 
 function pad(num) { return String(num).padStart(2, '0'); }
 function dateKey(date) { return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`; }
@@ -446,6 +467,96 @@ function formatEventTime(event) {
   return event.start.toLocaleTimeString(locale, options);
 }
 
+function getTodayEvents() {
+  const key = dateKey(new Date());
+  return calendarEvents
+    .filter(event => eventOccursOnDate(event, key))
+    .sort((a, b) => {
+      if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1;
+      return a.start - b.start;
+    });
+}
+
+function isTodayEventsHidden() {
+  try {
+    return localStorage.getItem(TODAY_EVENTS_HIDDEN_KEY) === dateKey(new Date());
+  } catch (error) {
+    console.warn('Unable to read today events preference:', error);
+    return false;
+  }
+}
+
+function hideTodayEventsForToday() {
+  try {
+    localStorage.setItem(TODAY_EVENTS_HIDDEN_KEY, dateKey(new Date()));
+  } catch (error) {
+    console.warn('Unable to save today events preference:', error);
+  }
+  todayEventsModal?.close();
+}
+
+function renderTodayEventsModal() {
+  if (!todayEventsModal || !todayEventsDate || !todayEventsList) return;
+  const now = new Date();
+  const events = getTodayEvents();
+  const locale = getLocale();
+
+  todayEventsDate.textContent = now.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  });
+
+  todayEventsList.innerHTML = events.map(event => {
+    const tagLabel = event.category
+      ? (i18n[currentLang].tags[event.category] || event.category)
+      : i18n[currentLang].uncategorized;
+    return `
+      <button class="today-event-card" data-event-id="${escapeHtml(event.id)}" type="button">
+        <span class="today-event-accent" style="${eventStyle(event)}"></span>
+        <span class="today-event-content">
+          <span class="today-event-time">${escapeHtml(formatEventTime(event))}</span>
+          <strong class="today-event-title">${escapeHtml(event.title)}</strong>
+          <span class="today-event-tag">${escapeHtml(tagLabel)}</span>
+        </span>
+        <span class="material-symbols-rounded today-event-arrow" aria-hidden="true">chevron_right</span>
+      </button>
+    `;
+  }).join('');
+
+  todayEventsList.querySelectorAll('.today-event-card').forEach(button => {
+    button.addEventListener('click', () => {
+      const eventData = calendarEvents.find(item => item.id === button.dataset.eventId);
+      if (!eventData) return;
+      todayEventsModal.close();
+      openEvent(eventData);
+    });
+  });
+}
+
+function cleanTodayOpenParameter() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('open')) return;
+  url.searchParams.delete('open');
+  const cleanUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
+
+function maybeShowTodayEvents() {
+  const requestedFromNotification = new URLSearchParams(window.location.search).get('open') === 'today';
+  if (requestedFromNotification) cleanTodayOpenParameter();
+  if (loadError || isTodayEventsHidden()) return;
+
+  const events = getTodayEvents();
+  if (!events.length || !todayEventsModal || todayEventsModal.open) return;
+
+  renderTodayEventsModal();
+  if (appModal?.open) appModal.close();
+  if (modal?.open) modal.close();
+  todayEventsModal.showModal();
+}
+
 function applyLanguage() {
   document.documentElement.lang = currentLang === 'zh' ? 'zh-Hant' : currentLang;
   document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentLang));
@@ -457,6 +568,7 @@ function applyLanguage() {
   renderCalendar();
   renderMeta();
   updateViewModeUi();
+  if (todayEventsModal?.open) renderTodayEventsModal();
 }
 
 function renderMeta() {
@@ -659,6 +771,7 @@ async function loadEvents(force = false) {
   } finally {
     isLoading = false;
     renderCalendar();
+    maybeShowTodayEvents();
   }
 }
 
@@ -685,6 +798,20 @@ viewToggleBtn.addEventListener('click', () => {
 document.getElementById('closeModal').addEventListener('click', () => modal.close());
 const appModalClose = document.getElementById('appModalClose');
 if (appModalClose) appModalClose.addEventListener('click', () => appModal.close());
+document.getElementById('todayEventsClose')?.addEventListener('click', () => todayEventsModal.close());
+document.getElementById('todayEventsCloseButton')?.addEventListener('click', () => todayEventsModal.close());
+document.getElementById('todayEventsDismissToday')?.addEventListener('click', hideTodayEventsForToday);
+
+document.addEventListener('visibilitychange', () => {
+  if (
+    !document.hidden &&
+    !isLoading &&
+    !modal?.open &&
+    !appModal?.open
+  ) {
+    maybeShowTodayEvents();
+  }
+});
 
 document.querySelectorAll('.lang-btn').forEach(button => {
   button.addEventListener('click', () => {
@@ -711,7 +838,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=27', { scope: './' });
+    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=28', { scope: './' });
     console.log('Service Worker registered:', swRegistration.scope);
     return swRegistration;
   } catch (error) {
@@ -766,12 +893,19 @@ async function initFirebaseMessaging() {
       const title = payload.notification?.title || 'ESON × UNISON Calendar';
       const body = payload.notification?.body || '';
       if (Notification.permission === 'granted') {
-        new Notification(title, {
+        const notification = new Notification(title, {
           body,
           icon: './icons/icon-192.png',
           badge: './icons/icon-192.png',
           data: payload.data || {}
         });
+        notification.onclick = () => {
+          notification.close();
+          const url = new URL(window.location.href);
+          url.searchParams.set('open', 'today');
+          window.location.href = url.toString();
+          window.focus();
+        };
       }
     });
 
