@@ -33,9 +33,9 @@
 .timezone-label{display:flex;align-items:center;gap:6px;color:#52627a;font-weight:700;white-space:nowrap;padding:0 8px}.timezone-label .material-symbols-rounded{font-size:20px}.page-switch-wrap{display:flex;align-items:center;gap:12px;margin-bottom:12px}.page-switch-label{font-size:13px;font-weight:800;color:#7b879a;letter-spacing:.04em}.page-switch{display:flex;background:#e9eef5;padding:4px;border-radius:13px;gap:4px}.page-switch button{border:0;background:transparent;padding:10px 16px;border-radius:10px;font-weight:800;color:#66758a;display:flex;align-items:center;gap:6px;cursor:pointer}.page-switch button.active{background:#fff;color:#1f2b3d;box-shadow:0 2px 8px rgba(29,47,74,.08)}.canvas-head.secondary{margin-top:0}.success-editor-fixed{text-align:center;padding:12px 0}.success-icon{color:#3b88df}.success-icon .material-symbols-rounded{font-size:52px}.success-code-box{display:flex;flex-direction:column;gap:5px;background:#f5f8fc;border:1px solid #e1e8f1;border-radius:14px;padding:16px;margin:22px 0}.success-code-box b{font-size:26px}.summary-preview{text-align:left;border-top:1px solid #e7edf4;border-bottom:1px solid #e7edf4;padding:18px 0}.summary-line{display:flex;justify-content:space-between;padding:9px 0;color:#52627a}.save-reminder{margin-top:18px;display:flex;gap:10px;text-align:left;background:#fff8e8;border:1px solid #f1d99b;border-radius:12px;padding:14px}.editable-success-note{margin-top:24px;border:1px dashed #b9c8d8;border-radius:14px;padding:16px}.drag-handle.static{justify-content:center;color:#7f90a5}.table th:last-child,.table td:last-child{white-space:nowrap}
 @media(max-width:700px){.login-lang-wrap{top:14px;right:14px}.login-wrap{padding-top:90px}}</style>
 <script>
-window.ESON_EVENT_CONFIG = {
-  environment: "dev",
-  apiUrl: ""
+window.ESON_EVENT_CONFIG={
+  environment:'dev',
+  apiUrl:'https://script.google.com/macros/s/AKfycby5Y2iMZPeqT82TLlQk04qrA6AEFjXyCv0K-1A-OGaRemgkL5qGK04cv_Li3mx_u5SQ/exec'
 };
 </script>
 </head>
@@ -46,6 +46,9 @@ const mi=(name)=>`<span class="material-symbols-outlined" aria-hidden="true">${n
 const app=document.querySelector('#app');
 let currentLang='zh';
 let previewFromEditor=false;
+const API_URL='https://script.google.com/macros/s/AKfycby5Y2iMZPeqT82TLlQk04qrA6AEFjXyCv0K-1A-OGaRemgkL5qGK04cv_Li3mx_u5SQ/exec';
+let currentEventId=null;
+let dashboardLoading=false;
 let dashboardFilter='all';
 let dashboardQuery='';
 let editorPublished=false;
@@ -64,13 +67,7 @@ const i18n={
   ja:{open:'受付中',deadline:'受付締切',email:'メールアドレス',emailHint:'1つのメールアドレスにつき1回のみ申込可能です。送信後は内容を変更できません。',submit:'申込を送信',confirmTitle:'申込を送信しますか？',confirmText:'入力内容に誤りがないか、もう一度ご確認ください。送信後は申込内容を変更できません。',back:'確認に戻る',confirm:'確認して送信',success:'申込が完了しました！',code:'申込番号',summary:'今回の入力内容',save:'スクリーンショットを保存してください',saveText:'このページを閉じる、または再読み込みすると、今回の送信内容は再表示できません。申込番号と入力内容をスクリーンショットで保存してください。',notStarted:'まだ受付開始前です',full:'定員に達しました',closed:'受付は終了しました',paused:'現在受付を一時停止しています',endPreview:'プレビューを終了'}
 };
 
-const demoEvents=[
- {id:'evt1',name:'ESON Birthday Fan Meeting 2026',status:'open',label:'開放中',range:'2026/12/01 20:00 — 12/05 23:59',count:18,cap:30,paid:12,slug:'eson-birthday-2026'},
- {id:'evt2',name:'Missing yoUNITON Special Event',status:'full',label:'已額滿',range:'2026/10/18 18:00 — 10/20 23:59',count:35,cap:35,paid:31,slug:'event-2'},
- {id:'evt3',name:'Autumn Support Event',status:'upcoming',label:'尚未開放',range:'2026/09/10 20:00 — 09/12 23:59',count:0,cap:20,paid:0,slug:'event-3'},
- {id:'evt4',name:'Summer Mini Fan Meeting',status:'closed',label:'已截止',range:'2026/07/01 20:00 — 07/05 23:59',count:24,cap:30,paid:24,slug:'event-4'},
- {id:'evt5',name:'Draft Event',status:'draft',label:'草稿',range:'尚未設定',count:0,cap:30,paid:0,slug:'event-5'}
-];
+let demoEvents=[];
 
 let editorBlocks=[
  {id:'email',type:'email',locked:true,title:'Email',desc:'系統固定欄位・每個 Email 僅能報名一次'},
@@ -92,6 +89,196 @@ const responses=[
  ['#0005','momo@example.com','Momo','@momo','2026/12/01 20:00:09','已退款','有效','退款完成']
 ];
 
+
+async function apiGet(action, params={}){
+  const u=new URL(API_URL);
+  u.searchParams.set('action',action);
+  Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)u.searchParams.set(k,v)});
+  const res=await fetch(u.toString(),{method:'GET',redirect:'follow'});
+  if(!res.ok)throw new Error('API HTTP '+res.status);
+  const data=await res.json();
+  if(!data.success)throw new Error(data.error||'API error');
+  return data;
+}
+async function apiPost(action,payload={}){
+  const res=await fetch(API_URL,{
+    method:'POST',
+    redirect:'follow',
+    body:JSON.stringify({action,...payload})
+  });
+  if(!res.ok)throw new Error('API HTTP '+res.status);
+  const data=await res.json();
+  if(!data.success)throw new Error(data.error||'API error');
+  return data.result;
+}
+function apiDateValue(v=''){
+  if(!v)return '';
+  if(typeof v==='string')return v.replace(' ','T').replace(/\//g,'-').slice(0,16);
+  return '';
+}
+function formatRange(e){
+  if(!e.openTime&&!e.closeTime)return '尚未設定';
+  const a=String(e.openTime||'').replace(/-/g,'/').slice(0,16);
+  const b=String(e.closeTime||'').replace(/-/g,'/').slice(5,16);
+  return `${a||'—'} — ${b||'—'}`;
+}
+function apiEventToUi(e){
+  let status='draft',label='草稿';
+  if(e.status!=='draft'){
+    const now=new Date();
+    const start=e.openTime?new Date(String(e.openTime).replace(/\//g,'-').replace(' ','T')+'+09:00'):null;
+    const end=e.closeTime?new Date(String(e.closeTime).replace(/\//g,'-').replace(' ','T')+'+09:00'):null;
+    if(e.paused){status='closed';label='已暫停'}
+    else if(Number(e.acceptedCount)>=Number(e.totalCapacity)&&Number(e.totalCapacity)>0){status='full';label='已額滿'}
+    else if(start&&now<start){status='upcoming';label='尚未開放'}
+    else if(end&&now>=end){status='closed';label='已截止'}
+    else {status='open';label='開放中'}
+  }
+  return {
+    id:e.eventId,
+    name:e.name||'未命名活動',
+    status,label,
+    range:formatRange(e),
+    count:Number(e.acceptedCount)||0,
+    cap:Number(e.totalCapacity)||Number(e.initialCapacity)||0,
+    paid:0,
+    slug:e.slug||'',
+    raw:e
+  };
+}
+async function loadDashboardFromApi(){
+  dashboardLoading=true;
+  const rows=document.querySelector('#eventRows');
+  if(rows)rows.innerHTML=`<tr><td colspan="6"><div class="empty-state">${mi('progress_activity')}<b>正在讀取 Google Sheet...</b><span>請稍候</span></div></td></tr>`;
+  try{
+    const data=await apiGet('listEvents');
+    demoEvents=(data.events||[]).map(apiEventToUi);
+    refreshDashboardRows();
+  }catch(err){
+    if(rows)rows.innerHTML=`<tr><td colspan="6"><div class="empty-state">${mi('error')}<b>無法讀取 Google Sheet</b><span>${esc(err.message)}</span></div></td></tr>`;
+    console.error(err);
+  }finally{dashboardLoading=false}
+}
+function resetNewEventEditor(){
+  currentEventId=null;
+  editorPublished=false;
+  editorPage='form';
+  editorSideTab='components';
+  activityConfig={name:'',slug:'',start:'',end:'',capacity:30,showInList:true,showCount:true};
+  editorBlocks=[
+    {id:'email',type:'email',locked:true,title:'Email',desc:'系統固定欄位・每個 Email 僅能報名一次'}
+  ];
+  selectedBlockId='email';
+  successNote='';
+}
+async function loadEventForEditor(eventId){
+  try{
+    toast('正在讀取活動資料...');
+    const data=await apiGet('getEvent',{eventId});
+    const detail=data.event;
+    const e=detail.event||detail;
+    currentEventId=e.eventId;
+    editorPublished=e.status!=='draft';
+    activityConfig={
+      name:e.name||'',
+      slug:e.slug||'',
+      start:apiDateValue(e.openTime),
+      end:apiDateValue(e.closeTime),
+      capacity:Number(e.initialCapacity)||Number(e.totalCapacity)||30,
+      showInList:e.showInEventList!==false,
+      showCount:e.showRegistrationCount!==false
+    };
+    editorBlocks=(detail.blocks&&detail.blocks.length)?detail.blocks:[
+      {id:'email',type:'email',locked:true,title:'Email',desc:'系統固定欄位・每個 Email 僅能報名一次'}
+    ];
+    if(!editorBlocks.some(b=>b.type==='email')){
+      editorBlocks.unshift({id:'email',type:'email',locked:true,title:'Email',desc:'系統固定欄位・每個 Email 僅能報名一次'});
+    }
+    selectedBlockId=editorBlocks[0]?.id||'email';
+    successNote=detail.pages?.success?.note||'';
+    editorPage='form';
+    navigate('editor');
+  }catch(err){
+    alert('讀取活動失敗：'+err.message);
+  }
+}
+async function saveCurrentEvent(showToast=true){
+  const result=await apiPost('saveEvent',{data:{
+    eventId:currentEventId||undefined,
+    name:activityConfig.name,
+    slug:activityConfig.slug,
+    openTime:activityConfig.start,
+    closeTime:activityConfig.end,
+    initialCapacity:activityConfig.capacity,
+    showInEventList:activityConfig.showInList,
+    showRegistrationCount:activityConfig.showCount,
+    paused:false
+  }});
+  currentEventId=result.eventId;
+  if(showToast)toast('活動基本資料已寫入 Google Sheet');
+  return result;
+}
+async function saveCurrentBlocks(){
+  if(!currentEventId)await saveCurrentEvent(false);
+  return apiPost('saveFormBlocks',{eventId:currentEventId,blocks:editorBlocks});
+}
+async function saveCurrentSuccessPage(){
+  if(!currentEventId)await saveCurrentEvent(false);
+  return apiPost('savePageContent',{
+    eventId:currentEventId,
+    pageType:'success',
+    content:{note:successNote||''}
+  });
+}
+async function saveDraftLive(){
+  try{
+    const btn=document.querySelector('#saveDraftBtn');
+    if(btn){btn.disabled=true;btn.textContent='儲存中...'}
+    await saveCurrentEvent(false);
+    await saveCurrentBlocks();
+    await saveCurrentSuccessPage();
+    toast('草稿已儲存到 Google Sheet');
+  }catch(err){
+    alert('儲存失敗：'+err.message);
+  }finally{
+    const btn=document.querySelector('#saveDraftBtn');
+    if(btn){btn.disabled=false;btn.textContent='儲存草稿'}
+  }
+}
+async function publishLive(){
+  try{
+    const btn=document.querySelector('#publishBtn');
+    if(btn){btn.disabled=true;btn.textContent='發布中...'}
+    await saveCurrentEvent(false);
+    await saveCurrentBlocks();
+    await saveCurrentSuccessPage();
+    await apiPost('publishEvent',{eventId:currentEventId});
+    editorPublished=true;
+    toast('活動已發布');
+    setTimeout(()=>navigate('dashboard'),500);
+  }catch(err){
+    alert('發布失敗：'+err.message);
+  }finally{
+    const btn=document.querySelector('#publishBtn');
+    if(btn){btn.disabled=false;btn.textContent='發布'}
+  }
+}
+async function savePublishedEditLive(){
+  try{
+    const btn=document.querySelector('#saveEditBtn');
+    if(btn){btn.disabled=true;btn.textContent='儲存中...'}
+    await saveCurrentEvent(false);
+    await saveCurrentBlocks();
+    await saveCurrentSuccessPage();
+    toast('編輯內容已儲存');
+  }catch(err){
+    alert('儲存失敗：'+err.message);
+  }finally{
+    const btn=document.querySelector('#saveEditBtn');
+    if(btn){btn.disabled=false;btn.textContent='儲存編輯'}
+  }
+}
+
 function protoNav(){return `<div class="prototype-nav"><span class="prototype-label">Prototype</span><select id="protoSelect"><option value="login">Admin 登入</option><option value="dashboard">Dashboard</option><option value="editor">Form Builder</option><option value="responses">報名資料</option><option value="public">Public Form</option><option value="success">成功頁</option><option value="notstarted">尚未開放</option><option value="full">已額滿</option><option value="closed">已截止</option><option value="paused">暫停</option></select></div>`}
 
 function adminLangName(code=adminUiLang){return ({zh:'中文',ko:'한국어',en:'English'})[code]||'中文'}
@@ -107,11 +294,15 @@ function renderLogin(){const t=loginStrings();app.innerHTML=`<div class="login-w
 function bindLoginLang(){const btn=document.querySelector('#loginLangBtn'),menu=document.querySelector('#loginLangMenu');if(!btn||!menu)return;btn.onclick=e=>{e.stopPropagation();menu.classList.toggle('open')};document.querySelectorAll('[data-login-lang]').forEach(x=>x.onclick=()=>{adminUiLang=x.dataset.loginLang;renderLogin()});document.addEventListener('click',()=>menu.classList.remove('open'),{once:true});}
 function dashboardRows(){const q=(dashboardQuery||'').trim().toLowerCase();return demoEvents.filter(e=>{const statusPass=dashboardFilter==='all'||(dashboardFilter==='open'&&e.status==='open')||(dashboardFilter==='upcoming'&&e.status==='upcoming')||(dashboardFilter==='ended'&&e.status==='closed')||(dashboardFilter==='draft'&&e.status==='draft');const haystack=(e.name+' '+(e.slug||'')+' /event/'+(e.slug||'')).toLowerCase();const queryPass=!q||haystack.includes(q);return statusPass&&queryPass})}
 function dashboardTableHtml(){const rows=dashboardRows(); if(!rows.length)return `<tr><td colspan="6"><div class="empty-state">${mi('search_off')}<b>找不到符合條件的活動</b><span>請調整搜尋關鍵字或篩選條件。</span></div></td></tr>`;return rows.map(e=>{const publicCell=e.status==='draft'?`<span class="unpublished-label">${mi('hide_source')} 尚未發布</span>`:`<button class="btn small" data-open-public="${e.id}" title="開啟 https://eson1228.com/event/${e.slug}/">${mi('open_in_new')} 開啟前台</button>`;return `<tr><td><b>${e.name}</b><div class="tiny muted" style="margin-top:4px">${e.status==='draft'?'尚未產生公開網址':'/event/'+e.slug+'/'}</div></td><td><span class="badge ${e.status}">${e.label}</span></td><td>${e.range}</td><td><b>${e.count} / ${e.cap}</b><div class="progress"><i style="width:${Math.min(100,e.count/e.cap*100)}%"></i></div></td><td>${publicCell}</td><td><div class="row-actions"><button class="btn small" data-edit-event="${e.id}">編輯</button>${e.status==='draft'?'':`<button class="btn small" data-nav="responses">查看資料</button>`}${['full','closed'].includes(e.status)?'<button class="btn small soft" data-capacity="'+e.id+'">再次開放增收</button>':''}</div></td></tr>`}).join('')}
-function renderDashboard(){app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><h1>活動管理</h1><div class="muted">所有時間皆以 KST（UTC+9）顯示</div></div><div class="actions"><button class="btn primary" data-nav="editor">${mi('add')}新增活動</button></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="dashboardSearch" placeholder="搜尋活動名稱或網址" value="${dashboardQuery.replaceAll('"','&quot;')}" /></div><div class="seg" id="dashboardFilters"><button data-filter="all" class="${dashboardFilter==='all'?'active':''}">全部</button><button data-filter="open" class="${dashboardFilter==='open'?'active':''}">開放中</button><button data-filter="upcoming" class="${dashboardFilter==='upcoming'?'active':''}">未開始</button><button data-filter="ended" class="${dashboardFilter==='ended'?'active':''}">已結束</button><button data-filter="draft" class="${dashboardFilter==='draft'?'active':''}">草稿</button></div></div><div class="card table-card"><table class="table"><thead><tr><th>活動名稱</th><th>狀態</th><th>報名期間（KST）</th><th>報名</th><th>前台頁面</th><th>操作</th></tr></thead><tbody id="eventRows">${dashboardTableHtml()}</tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#dashboardSearch').addEventListener('input',e=>{dashboardQuery=e.target.value;refreshDashboardRows()});document.querySelectorAll('#dashboardFilters [data-filter]').forEach(b=>b.onclick=()=>{dashboardFilter=b.dataset.filter;document.querySelectorAll('#dashboardFilters button').forEach(x=>x.classList.toggle('active',x===b));refreshDashboardRows()});bindCapacityButtons();bindDashboardEditors();bindPublicButtons();}
+function renderDashboard(){app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><h1>活動管理</h1><div class="muted">所有時間皆以 KST（UTC+9）顯示</div></div><div class="actions"><button class="btn primary" data-nav="editor">${mi('add')}新增活動</button></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="dashboardSearch" placeholder="搜尋活動名稱或網址" value="${dashboardQuery.replaceAll('"','&quot;')}" /></div><div class="seg" id="dashboardFilters"><button data-filter="all" class="${dashboardFilter==='all'?'active':''}">全部</button><button data-filter="open" class="${dashboardFilter==='open'?'active':''}">開放中</button><button data-filter="upcoming" class="${dashboardFilter==='upcoming'?'active':''}">未開始</button><button data-filter="ended" class="${dashboardFilter==='ended'?'active':''}">已結束</button><button data-filter="draft" class="${dashboardFilter==='draft'?'active':''}">草稿</button></div></div><div class="card table-card"><table class="table"><thead><tr><th>活動名稱</th><th>狀態</th><th>報名期間（KST）</th><th>報名</th><th>前台頁面</th><th>操作</th></tr></thead><tbody id="eventRows">${dashboardTableHtml()}</tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#dashboardSearch').addEventListener('input',e=>{dashboardQuery=e.target.value;refreshDashboardRows()});document.querySelectorAll('#dashboardFilters [data-filter]').forEach(b=>b.onclick=()=>{dashboardFilter=b.dataset.filter;document.querySelectorAll('#dashboardFilters button').forEach(x=>x.classList.toggle('active',x===b));refreshDashboardRows()});bindCapacityButtons();bindDashboardEditors();bindPublicButtons();loadDashboardFromApi();}
 function refreshDashboardRows(){document.querySelector('#eventRows').innerHTML=dashboardTableHtml();bind();bindCapacityButtons();bindDashboardEditors();bindPublicButtons();}
 function bindCapacityButtons(){document.querySelectorAll('[data-capacity]').forEach(b=>b.onclick=()=>showCapacityModal(b.dataset.capacity));}
 function bindPublicButtons(){document.querySelectorAll('[data-open-public]').forEach(btn=>btn.onclick=()=>{previewFromEditor=false;renderPublic()})}
-function bindDashboardEditors(){document.querySelectorAll('[data-edit-event]').forEach(b=>b.onclick=()=>{const ev=demoEvents.find(e=>e.id===b.dataset.editEvent);editorPublished=!!ev&&ev.status!=='draft';editorPage='form';navigate('editor')});const add=document.querySelector('[data-nav="editor"]');if(add&&add.closest('.page-head'))add.onclick=()=>{editorPublished=false;editorPage='form';navigate('editor')}}
+function bindDashboardEditors(){
+  document.querySelectorAll('[data-edit-event]').forEach(b=>b.onclick=()=>loadEventForEditor(b.dataset.editEvent));
+  const add=document.querySelector('[data-nav="editor"]');
+  if(add&&add.closest('.page-head'))add.onclick=()=>{resetNewEventEditor();navigate('editor')};
+}
 
 function esc(v=''){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function currentBlock(){return editorBlocks.find(b=>b.id===selectedBlockId)||editorBlocks[0]}
@@ -181,9 +372,9 @@ function bindEditor(){
   document.querySelector('#activitySettingsBtn').onclick=showActivitySettings;
   document.querySelectorAll('[data-editor-page]').forEach(b=>b.onclick=()=>{editorPage=b.dataset.editorPage;renderEditor()});
   document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(editorPage!=='form'){toast('請先切換到「報名表單」再新增元件');return}addBlock(b.dataset.add)});
-  document.querySelector('#saveDraftBtn')?.addEventListener('click',()=>toast('草稿已儲存（原型）'));
-  document.querySelector('#publishBtn')?.addEventListener('click',()=>{editorPublished=true;toast('活動已發布（原型）');setTimeout(renderEditor,350)});
-  document.querySelector('#saveEditBtn')?.addEventListener('click',()=>toast('編輯內容已儲存（原型）'));
+  document.querySelector('#saveDraftBtn')?.addEventListener('click',saveDraftLive);
+  document.querySelector('#publishBtn')?.addEventListener('click',publishLive);
+  document.querySelector('#saveEditBtn')?.addEventListener('click',savePublishedEditLive);
 }
 function bindSettingsPanel(){
   const panel=document.querySelector('#settingsPanel'), block=currentBlock(); if(!panel||!block)return;
@@ -216,7 +407,7 @@ function refreshEditorBlocks(){const c=document.querySelector('#blocksContainer'
 function addBlock(type){
   const id=type+'_'+Date.now();const defaults={short:{title:'簡答題目',desc:'',placeholder:'請輸入內容',required:false},long:{title:'詳答題目',desc:'',placeholder:'請輸入內容',required:false,height:'medium'},radio:{title:'單選題目',desc:'',required:false,options:['選項 1','選項 2'],other:false},checkbox:{title:'複選題目',desc:'',required:false,options:['選項 1','選項 2'],other:false},select:{title:'下拉選單',desc:'',placeholder:'請選擇',required:false,options:['選項 1','選項 2']},grid:{title:'單選表格',desc:'',required:false,rows:['列 1','列 2'],cols:['選項 A','選項 B'],everyRow:false},date:{title:'日期',desc:'',required:false},time:{title:'時間',desc:'',required:false},heading:{title:'大標題',align:'left'},subheading:{title:'小標題',align:'left'},paragraph:{text:'請輸入內文',align:'left'},image:{size:'large',alt:'',dataUrl:''},divider:{},spacer:{height:'medium'}};editorBlocks.push({id,type,...(defaults[type]||{})});selectedBlockId=id;refreshEditorBlocks();document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});toast('已新增元件，可在右側調整設定');}
 
-function showActivitySettings(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="activitySettingsModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>活動基本設定</h3><p>此處是整個活動層級的設定，和右側「元件設定」不同。</p></div><button class="btn icon" id="closeActivitySettings">${mi('close')}</button></div><div class="settings-grid"><div class="field"><label>活動名稱</label><input id="cfgName" value="${esc(activityConfig.name)}"></div><div></div><div class="field full-span"><label>專屬網址</label><div class="url-field-wrap"><span class="url-prefix">https://eson1228.com/event/</span><input id="cfgSlug" value="${esc(activityConfig.slug)}" placeholder="eson-birthday-2026"></div><div class="url-help">僅限英文字母、數字與連字號（-），例如：<b>eson-birthday-2026</b></div></div><div class="field"><label>表單開放時間（KST）</label><input id="cfgStart" type="datetime-local" value="${activityConfig.start}"></div><div class="field"><label>表單關閉時間（KST）</label><input id="cfgEnd" type="datetime-local" value="${activityConfig.end}"></div><div class="field"><label>初始名額</label><input id="cfgCapacity" type="number" min="1" value="${activityConfig.capacity}"></div><div class="field"><label>前台活動列表</label><select id="cfgList"><option value="yes" ${activityConfig.showInList?'selected':''}>顯示</option><option value="no" ${!activityConfig.showInList?'selected':''}>不顯示</option></select></div></div>${toggleRow('顯示目前報名人數','cfgShowCount',activityConfig.showCount)}<div class="modal-actions"><button class="btn" id="cancelActivitySettings">取消</button><button class="btn primary" id="saveActivitySettings">儲存設定</button></div></div></div>`);const close=()=>document.querySelector('#activitySettingsModal')?.remove();document.querySelector('#closeActivitySettings').onclick=close;document.querySelector('#cancelActivitySettings').onclick=close;const sw=document.querySelector('[data-toggle="cfgShowCount"]');if(sw)sw.onclick=()=>sw.classList.toggle('on');const slugInput=document.querySelector('#cfgSlug');if(slugInput)slugInput.addEventListener('input',()=>{slugInput.value=slugInput.value.toLowerCase().replace(/[^a-z0-9-]/g,'')});document.querySelector('#saveActivitySettings').onclick=()=>{activityConfig={...activityConfig,name:document.querySelector('#cfgName').value,slug:document.querySelector('#cfgSlug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,''),start:document.querySelector('#cfgStart').value,end:document.querySelector('#cfgEnd').value,capacity:+document.querySelector('#cfgCapacity').value||1,showInList:document.querySelector('#cfgList').value==='yes',showCount:sw?.classList.contains('on')};close();renderEditor();toast('活動基本設定已更新（原型）')};}
+function showActivitySettings(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="activitySettingsModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>活動基本設定</h3><p>此處是整個活動層級的設定，和右側「元件設定」不同。</p></div><button class="btn icon" id="closeActivitySettings">${mi('close')}</button></div><div class="settings-grid"><div class="field"><label>活動名稱</label><input id="cfgName" value="${esc(activityConfig.name)}"></div><div></div><div class="field full-span"><label>專屬網址</label><div class="url-field-wrap"><span class="url-prefix">https://eson1228.com/event/</span><input id="cfgSlug" value="${esc(activityConfig.slug)}" placeholder="eson-birthday-2026"></div><div class="url-help">僅限英文字母、數字與連字號（-），例如：<b>eson-birthday-2026</b></div></div><div class="field"><label>表單開放時間（KST）</label><input id="cfgStart" type="datetime-local" value="${activityConfig.start}"></div><div class="field"><label>表單關閉時間（KST）</label><input id="cfgEnd" type="datetime-local" value="${activityConfig.end}"></div><div class="field"><label>初始名額</label><input id="cfgCapacity" type="number" min="1" value="${activityConfig.capacity}"></div><div class="field"><label>前台活動列表</label><select id="cfgList"><option value="yes" ${activityConfig.showInList?'selected':''}>顯示</option><option value="no" ${!activityConfig.showInList?'selected':''}>不顯示</option></select></div></div>${toggleRow('顯示目前報名人數','cfgShowCount',activityConfig.showCount)}<div class="modal-actions"><button class="btn" id="cancelActivitySettings">取消</button><button class="btn primary" id="saveActivitySettings">儲存設定</button></div></div></div>`);const close=()=>document.querySelector('#activitySettingsModal')?.remove();document.querySelector('#closeActivitySettings').onclick=close;document.querySelector('#cancelActivitySettings').onclick=close;const sw=document.querySelector('[data-toggle="cfgShowCount"]');if(sw)sw.onclick=()=>sw.classList.toggle('on');const slugInput=document.querySelector('#cfgSlug');if(slugInput)slugInput.addEventListener('input',()=>{slugInput.value=slugInput.value.toLowerCase().replace(/[^a-z0-9-]/g,'')});document.querySelector('#saveActivitySettings').onclick=()=>{activityConfig={...activityConfig,name:document.querySelector('#cfgName').value,slug:document.querySelector('#cfgSlug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,''),start:document.querySelector('#cfgStart').value,end:document.querySelector('#cfgEnd').value,capacity:+document.querySelector('#cfgCapacity').value||1,showInList:document.querySelector('#cfgList').value==='yes',showCount:sw?.classList.contains('on')};close();renderEditor();toast('活動基本設定已更新；按「儲存草稿」後會寫入 Google Sheet')};}
 
 function showCapacityModal(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="capacityModal"><div class="modal"><h3>再次開放增收</h3><p>目前總名額為 35 人。增加的名額會直接加到目前總名額，不會因取消或退款自動釋出名額。</p><div class="field"><label>本次增加名額</label><input type="number" value="5"></div><div class="field"><label>新的關閉時間（若原活動已截止）</label><input type="datetime-local" value="2026-10-22T23:59"></div><div class="modal-actions"><button class="btn" id="capCancel">取消</button><button class="btn primary" id="capConfirm">確認再次開放</button></div></div></div>`);const close=()=>document.querySelector('#capacityModal')?.remove();document.querySelector('#capCancel').onclick=close;document.querySelector('#capConfirm').onclick=()=>{close();toast('已增加 5 個名額（原型）')};}
 
