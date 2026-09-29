@@ -94,26 +94,51 @@ const responses=[
 ];
 
 
-async function apiGet(action, params={}){
+async function apiGet(action, params={}, attempt=0){
   const u=new URL(API_URL);
   u.searchParams.set('action',action);
   Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)u.searchParams.set(k,v)});
-  const res=await fetch(u.toString(),{method:'GET',redirect:'follow'});
-  if(!res.ok)throw new Error('API HTTP '+res.status);
-  const data=await res.json();
-  if(!data.success)throw new Error(data.error||'API error');
-  return data;
+  try{
+    const res=await fetch(u.toString(),{method:'GET',redirect:'follow',cache:'no-store'});
+    if((res.status===404||res.status===503)&&attempt<1){
+      await new Promise(r=>setTimeout(r,700));
+      return apiGet(action,params,attempt+1);
+    }
+    if(!res.ok)throw new Error('API HTTP '+res.status);
+    const data=await res.json();
+    if(!data.success)throw new Error(data.error||'API error');
+    return data;
+  }catch(err){
+    if(attempt<1){
+      await new Promise(r=>setTimeout(r,700));
+      return apiGet(action,params,attempt+1);
+    }
+    throw err;
+  }
 }
-async function apiPost(action,payload={}){
-  const res=await fetch(API_URL,{
-    method:'POST',
-    redirect:'follow',
-    body:JSON.stringify({action,...payload})
-  });
-  if(!res.ok)throw new Error('API HTTP '+res.status);
-  const data=await res.json();
-  if(!data.success)throw new Error(data.error||'API error');
-  return data.result;
+async function apiPost(action,payload={},attempt=0){
+  try{
+    const res=await fetch(API_URL,{
+      method:'POST',
+      redirect:'follow',
+      cache:'no-store',
+      body:JSON.stringify({action,...payload})
+    });
+    if((res.status===404||res.status===503)&&attempt<1){
+      await new Promise(r=>setTimeout(r,700));
+      return apiPost(action,payload,attempt+1);
+    }
+    if(!res.ok)throw new Error('API HTTP '+res.status);
+    const data=await res.json();
+    if(!data.success)throw new Error(data.error||'API error');
+    return data.result;
+  }catch(err){
+    if(attempt<1){
+      await new Promise(r=>setTimeout(r,700));
+      return apiPost(action,payload,attempt+1);
+    }
+    throw err;
+  }
 }
 function apiDateValue(v=''){
   if(!v)return '';
@@ -502,11 +527,15 @@ function showCapacityModal(eventId){
   };
 }
 function prettyAnswer(v){if(Array.isArray(v))return v.join('、');if(v&&typeof v==='object')return Object.entries(v).map(([k,x])=>`${k}: ${x}`).join(' / ');return v==null?'':String(v)}
-function filteredResponses(){const q=responseSearch.trim().toLowerCase();return liveResponses.filter(r=>{const a=Object.values(r.answers||{}).map(prettyAnswer).join(' ');const hay=[r.registrationNumber,r.email,a,r.adminNote].join(' ').toLowerCase();return(!q||hay.includes(q))&&(responsePaymentFilter==='all'||r.paymentStatus===responsePaymentFilter)&&(responseStatusFilter==='all'||r.registrationStatus===responseStatusFilter)})}
+function filteredResponses(){const q=String(responseSearchText||'').trim().toLowerCase();return liveResponses.filter(r=>{const a=Object.values(r.answers||{}).map(prettyAnswer).join(' ');const hay=[r.registrationNumber,r.email,a,r.adminNote].join(' ').toLowerCase();return(!q||hay.includes(q))&&(responsePaymentFilter==='all'||r.paymentStatus===responsePaymentFilter)&&(responseStatusFilter==='all'||r.registrationStatus===responseStatusFilter)})}
 function responseRowsHtmlLive(){const rows=filteredResponses();if(!rows.length)return `<tr><td colspan="7"><div class="empty-state">${mi('inbox')}<b>目前沒有符合條件的報名資料</b></div></td></tr>`;return rows.map(r=>{const entries=Object.entries(r.answers||{}).filter(([k])=>k!=='email');const display=entries[0]?prettyAnswer(entries[0][1]):'—';return `<tr data-response-row="${r.responseId}" style="cursor:pointer"><td><b>${esc(r.registrationNumber)}</b></td><td>${esc(display)}</td><td>${esc(r.email)}</td><td>${esc(r.submittedAt)}</td><td><span class="badge ${r.paymentStatus==='已確認'?'open':r.paymentStatus==='已退款'?'closed':'upcoming'}">${esc(r.paymentStatus)}</span></td><td>${esc(r.registrationStatus)}</td><td>${esc(r.adminNote||'—')}</td></tr>`}).join('')}
 async function loadResponsesLive(){const body=document.querySelector('#responseRows');if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('progress_activity')}<b>正在讀取資料...</b></div></td></tr>`;try{const d=(await apiGet('getResponses',{eventId:currentEventId})).data;liveResponses=d.items||[];editorBlocks=d.blocks||editorBlocks||[];document.querySelector('#responseEventTitle').textContent=d.event?.name||'報名資料';document.querySelector('#statCapacity').textContent=`${d.stats.acceptedCount} / ${d.stats.totalCapacity}`;document.querySelector('#statPaid').textContent=d.stats.paidConfirmed;document.querySelector('#statUnpaid').textContent=d.stats.unpaid;refreshResponseRowsLive()}catch(err){if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('error')}<b>讀取失敗</b><span>${esc(err.message)}</span></div></td></tr>`}}
 function refreshResponseRowsLive(){const body=document.querySelector('#responseRows');if(body)body.innerHTML=responseRowsHtmlLive();document.querySelectorAll('[data-response-row]').forEach(tr=>tr.onclick=()=>openResponseDrawerLive(tr.dataset.responseRow))}
-function renderResponses(){if(!currentEventId){navigate('dashboard');return}app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><button class="btn small" data-nav="dashboard">${mi('arrow_back')} 活動列表</button><h1 id="responseEventTitle" style="margin-top:18px">報名資料</h1><div class="muted">報名資料管理 · KST</div></div><div class="actions"><button class="btn" id="openResponsePublicBtn">${mi('open_in_new')} 開啟表單頁面</button><button class="btn" id="editPublishedFormBtn">編輯表單</button></div></div><div class="response-top compact"><div class="card metric"><div class="muted small">目前名額</div><div class="num" id="statCapacity">—</div><div class="tiny muted">目前報名 / 設定總名額</div></div><div class="card metric"><div class="muted small">已確認入金</div><div class="num" id="statPaid">—</div></div><div class="card metric"><div class="muted small">尚未入金</div><div class="num" id="statUnpaid">—</div></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="responseSearch" placeholder="搜尋 Email、姓名或回答內容"></div><div class="filter-row"><select id="paymentFilter"><option value="all">全部入金狀態</option><option>未確認</option><option>已確認</option><option>已退款</option></select><select id="statusFilter"><option value="all">全部報名狀態</option><option>有效</option><option>取消</option><option>作廢</option></select></div></div><div class="card table-card"><table class="table"><thead><tr><th>編號</th><th>姓名 / 第一回答</th><th>Email</th><th>報名時間（KST）</th><th>入金</th><th>狀態</th><th>備註</th></tr></thead><tbody id="responseRows"></tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#responseSearch').oninput=e=>{responseSearch=e.target.value;refreshResponseRowsLive()};document.querySelector('#paymentFilter').onchange=e=>{responsePaymentFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#statusFilter').onchange=e=>{responseStatusFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#editPublishedFormBtn').onclick=()=>loadEventForEditor(currentEventId);document.querySelector('#openResponsePublicBtn').onclick=()=>{const ev=demoEvents.find(x=>x.id===currentEventId);if(ev?.slug)window.open(PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(ev.slug),'_blank')};loadResponsesLive()}
+function resetResponseSearchState(){
+  responseSearchText='';
+  try{ if('responseSearch' in window && typeof window.responseSearch!=='string'){} }catch(e){}
+}
+function renderResponses(){if(!currentEventId){navigate('dashboard');return}app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><button class="btn small" data-nav="dashboard">${mi('arrow_back')} 活動列表</button><h1 id="responseEventTitle" style="margin-top:18px">報名資料</h1><div class="muted">報名資料管理 · KST</div></div><div class="actions"><button class="btn" id="openResponsePublicBtn">${mi('open_in_new')} 開啟表單頁面</button><button class="btn" id="editPublishedFormBtn">編輯表單</button></div></div><div class="response-top compact"><div class="card metric"><div class="muted small">目前名額</div><div class="num" id="statCapacity">—</div><div class="tiny muted">目前報名 / 設定總名額</div></div><div class="card metric"><div class="muted small">已確認入金</div><div class="num" id="statPaid">—</div></div><div class="card metric"><div class="muted small">尚未入金</div><div class="num" id="statUnpaid">—</div></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="responseSearch" placeholder="搜尋 Email、姓名或回答內容"></div><div class="filter-row"><select id="paymentFilter"><option value="all">全部入金狀態</option><option>未確認</option><option>已確認</option><option>已退款</option></select><select id="statusFilter"><option value="all">全部報名狀態</option><option>有效</option><option>取消</option><option>作廢</option></select></div></div><div class="card table-card"><table class="table"><thead><tr><th>編號</th><th>姓名 / 第一回答</th><th>Email</th><th>報名時間（KST）</th><th>入金</th><th>狀態</th><th>備註</th></tr></thead><tbody id="responseRows"></tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#responseSearch').oninput=e=>{responseSearchText=e.target.value;refreshResponseRowsLive()};document.querySelector('#paymentFilter').onchange=e=>{responsePaymentFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#statusFilter').onchange=e=>{responseStatusFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#editPublishedFormBtn').onclick=()=>loadEventForEditor(currentEventId);document.querySelector('#openResponsePublicBtn').onclick=()=>{const ev=demoEvents.find(x=>x.id===currentEventId);if(ev?.slug)window.open(PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(ev.slug),'_blank')};loadResponsesLive()}
 function openResponseDrawerLive(responseId){const r=liveResponses.find(x=>x.responseId===responseId);if(!r)return;const answers=Object.entries(r.answers||{}).map(([k,v])=>`<div class="data-pair"><b>${esc(responseQuestionLabel(k))}</b><span>${esc(prettyAnswer(v))}</span></div>`).join('');document.body.insertAdjacentHTML('beforeend',`<div class="drawer-backdrop" id="drawerBg"></div><aside class="drawer" id="drawer"><div class="drawer-head"><div><b style="font-size:20px">${esc(r.registrationNumber)} · ${esc(r.email)}</b><div class="tiny muted">${esc(r.submittedAt)} KST</div></div><button class="btn icon close" id="drawerClose">${mi('close')}</button></div><div class="section-label">報名者提交資料</div>${answers}<div class="section-label">管理資料</div><div class="field"><label>入金狀態</label><select id="drawerPayment"><option ${r.paymentStatus==='未確認'?'selected':''}>未確認</option><option ${r.paymentStatus==='已確認'?'selected':''}>已確認</option><option ${r.paymentStatus==='已退款'?'selected':''}>已退款</option></select></div><div class="field"><label>報名狀態</label><select id="drawerStatus"><option ${r.registrationStatus==='有效'?'selected':''}>有效</option><option ${r.registrationStatus==='取消'?'selected':''}>取消</option><option ${r.registrationStatus==='作廢'?'selected':''}>作廢</option></select></div><div class="field"><label>管理員備註</label><textarea class="notearea" id="drawerNote">${esc(r.adminNote||'')}</textarea></div><button class="btn primary" style="width:100%;margin-top:12px" id="drawerSave">儲存變更</button><button class="btn danger" style="width:100%;margin-top:16px" id="reuseEmailBtn" ${r.allowEmailReuse?'disabled':''}>${r.allowEmailReuse?'已允許此 Email 再次報名':'允許此 Email 再次報名'}</button></aside>`);const close=()=>{document.querySelector('#drawerBg')?.remove();document.querySelector('#drawer')?.remove()};document.querySelector('#drawerClose').onclick=close;document.querySelector('#drawerBg').onclick=close;document.querySelector('#drawerSave').onclick=async()=>{
       const btn=document.querySelector('#drawerSave');
       try{
