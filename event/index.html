@@ -150,18 +150,51 @@ function apiEventToUi(e){
     raw:e
   };
 }
+
+function getDashboardLocalCache(){
+  try{
+    const raw=sessionStorage.getItem('eson_event_dashboard_cache_v1');
+    if(!raw)return null;
+    const parsed=JSON.parse(raw);
+    if(!parsed||!Array.isArray(parsed.events))return null;
+    return parsed;
+  }catch(e){return null}
+}
+function setDashboardLocalCache(events){
+  try{
+    sessionStorage.setItem('eson_event_dashboard_cache_v1',JSON.stringify({
+      savedAt:Date.now(),
+      events:events
+    }));
+  }catch(e){}
+}
+
 async function loadDashboardFromApi(){
   dashboardLoading=true;
   const rows=document.querySelector('#eventRows');
-  if(rows)rows.innerHTML=`<tr><td colspan="6"><div class="empty-state">${mi('progress_activity')}<b>正在讀取 Google Sheet...</b><span>請稍候</span></div></td></tr>`;
+  const local=getDashboardLocalCache();
+
+  if(local&&local.events.length){
+    demoEvents=local.events;
+    refreshDashboardRows();
+  }else if(rows){
+    rows.innerHTML=`<tr><td colspan="6"><div class="empty-state">${mi('progress_activity')}<b>正在讀取資料...</b><span>請稍候</span></div></td></tr>`;
+  }
+
   try{
     const data=await apiGet('listEvents');
     demoEvents=(data.events||[]).map(apiEventToUi);
+    setDashboardLocalCache(demoEvents);
     refreshDashboardRows();
   }catch(err){
-    if(rows)rows.innerHTML=`<tr><td colspan="6"><div class="empty-state">${mi('error')}<b>無法讀取 Google Sheet</b><span>${esc(err.message)}</span></div></td></tr>`;
-    console.error(err);
-  }finally{dashboardLoading=false}
+    if(!local&&rows){
+      rows.innerHTML=`<tr><td colspan="6"><div class="empty-state">${mi('error')}<b>無法讀取資料</b><span>${esc(err.message)}</span></div></td></tr>`;
+    }else{
+      console.error(err);
+    }
+  }finally{
+    dashboardLoading=false;
+  }
 }
 function resetNewEventEditor(){
   currentEventId=null;
@@ -177,7 +210,7 @@ function resetNewEventEditor(){
 }
 async function loadEventForEditor(eventId){
   try{
-    toast('正在讀取活動資料...');
+    toast('正在讀取資料...');
     const data=await apiGet('getEvent',{eventId});
     const detail=data.event;
     const e=detail.event||detail;
@@ -241,7 +274,7 @@ async function saveDraftLive(){
     await saveCurrentEvent(false);
     await saveCurrentBlocks();
     await saveCurrentSuccessPage();
-    toast('草稿已儲存到 Google Sheet');
+    sessionStorage.removeItem('eson_event_dashboard_cache_v1');toast('草稿已儲存');
   }catch(err){
     alert('儲存失敗：'+err.message);
   }finally{
@@ -258,7 +291,7 @@ async function publishLive(){
     await saveCurrentSuccessPage();
     await apiPost('publishEvent',{eventId:currentEventId});
     editorPublished=true;
-    toast('活動已發布');
+    sessionStorage.removeItem('eson_event_dashboard_cache_v1');toast('活動已發布');
     setTimeout(()=>navigate('dashboard'),500);
   }catch(err){
     alert('發布失敗：'+err.message);
@@ -274,7 +307,7 @@ async function savePublishedEditLive(){
     await saveCurrentEvent(false);
     await saveCurrentBlocks();
     await saveCurrentSuccessPage();
-    toast('編輯內容已儲存');
+    sessionStorage.removeItem('eson_event_dashboard_cache_v1');toast('編輯內容已儲存');
   }catch(err){
     alert('儲存失敗：'+err.message);
   }finally{
@@ -414,21 +447,64 @@ function addBlock(type){
 
 function showActivitySettings(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="activitySettingsModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>活動基本設定</h3><p>此處是整個活動層級的設定，和右側「元件設定」不同。</p></div><button class="btn icon" id="closeActivitySettings">${mi('close')}</button></div><div class="settings-grid"><div class="field"><label>活動名稱</label><input id="cfgName" value="${esc(activityConfig.name)}"></div><div></div><div class="field full-span"><label>專屬網址</label><div class="url-field-wrap"><span class="url-prefix">https://eson1228.com/event/</span><input id="cfgSlug" value="${esc(activityConfig.slug)}" placeholder="eson-birthday-2026"></div><div class="url-help">僅限英文字母、數字與連字號（-），例如：<b>eson-birthday-2026</b></div></div><div class="field"><label>表單開放時間（KST）</label><input id="cfgStart" type="datetime-local" value="${activityConfig.start}"></div><div class="field"><label>表單關閉時間（KST）</label><input id="cfgEnd" type="datetime-local" value="${activityConfig.end}"></div><div class="field"><label>初始名額</label><input id="cfgCapacity" type="number" min="1" value="${activityConfig.capacity}"></div><div class="field"><label>前台活動列表</label><select id="cfgList"><option value="yes" ${activityConfig.showInList?'selected':''}>顯示</option><option value="no" ${!activityConfig.showInList?'selected':''}>不顯示</option></select></div></div>${toggleRow('顯示目前報名人數','cfgShowCount',activityConfig.showCount)}<div class="modal-actions"><button class="btn" id="cancelActivitySettings">取消</button><button class="btn primary" id="saveActivitySettings">儲存設定</button></div></div></div>`);const close=()=>document.querySelector('#activitySettingsModal')?.remove();document.querySelector('#closeActivitySettings').onclick=close;document.querySelector('#cancelActivitySettings').onclick=close;const sw=document.querySelector('[data-toggle="cfgShowCount"]');if(sw)sw.onclick=()=>sw.classList.toggle('on');const slugInput=document.querySelector('#cfgSlug');if(slugInput)slugInput.addEventListener('input',()=>{slugInput.value=slugInput.value.toLowerCase().replace(/[^a-z0-9-]/g,'')});document.querySelector('#saveActivitySettings').onclick=()=>{activityConfig={...activityConfig,name:document.querySelector('#cfgName').value,slug:document.querySelector('#cfgSlug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,''),start:document.querySelector('#cfgStart').value,end:document.querySelector('#cfgEnd').value,capacity:+document.querySelector('#cfgCapacity').value||1,showInList:document.querySelector('#cfgList').value==='yes',showCount:sw?.classList.contains('on')};close();renderEditor();toast('活動基本設定已更新；按「儲存草稿」後會寫入 Google Sheet')};}
 
-function showCapacityModal(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="capacityModal"><div class="modal"><h3>再次開放增收</h3><p>目前總名額為 35 人。增加的名額會直接加到目前總名額，不會因取消或退款自動釋出名額。</p><div class="field"><label>本次增加名額</label><input type="number" value="5"></div><div class="field"><label>新的關閉時間（若原活動已截止）</label><input type="datetime-local" value="2026-10-22T23:59"></div><div class="modal-actions"><button class="btn" id="capCancel">取消</button><button class="btn primary" id="capConfirm">確認再次開放</button></div></div></div>`);const close=()=>document.querySelector('#capacityModal')?.remove();document.querySelector('#capCancel').onclick=close;document.querySelector('#capConfirm').onclick=()=>{close();toast('已增加 5 個名額（原型）')};}
+function showCapacityModal(eventId){
+  const ev=demoEvents.find(x=>x.id===eventId);
+  if(!ev)return;
 
-let liveResponses=[];let responseSearch='';let responsePaymentFilter='all';let responseStatusFilter='all';
-function responseQuestionLabel(key){
-  const b=(editorBlocks||[]).find(x=>String(x.id)===String(key));
-  if(b){
-    if(b.type==='email')return b.title||'Email';
-    return b.title||b.text||b.content||key;
-  }
-  return key==='email'?'Email':key;
+  const currentTotal=Number(ev.cap)||0;
+  const raw=ev.raw||{};
+  const now=new Date();
+  const close=raw.closeTime?new Date(String(raw.closeTime).replace(/\//g,'-').replace(' ','T')+'+09:00'):null;
+  const alreadyClosed=!!(close&&now>=close);
+
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="capacityModal"><div class="modal">
+    <h3>再次開放增收</h3>
+    <p>目前總名額為 <b>${currentTotal}</b> 人。增加名額後不會因取消、退款或作廢自動釋出名額。</p>
+    <div class="field"><label>本次增加名額</label><input id="capAddCount" type="number" min="1" step="1" value="5"></div>
+    <div class="field"><label>${alreadyClosed?'新的關閉時間':'新的關閉時間（可選）'} <span class="tiny muted">KST</span></label><input id="capNewClose" type="datetime-local"></div>
+    ${alreadyClosed?'<div class="reuse-confirm-note">此活動已因時間截止。確認後會立即重新開放，並持續到你設定的「新的關閉時間」。</div>':''}
+    <div class="modal-actions"><button class="btn" id="capCancel">取消</button><button class="btn primary" id="capConfirm">確認再次開放</button></div>
+  </div></div>`);
+
+  const closeModal=()=>document.querySelector('#capacityModal')?.remove();
+  document.querySelector('#capCancel').onclick=closeModal;
+
+  document.querySelector('#capConfirm').onclick=async()=>{
+    const btn=document.querySelector('#capConfirm');
+    const addCount=Number(document.querySelector('#capAddCount').value);
+    const newCloseTime=document.querySelector('#capNewClose').value;
+
+    if(!Number.isInteger(addCount)||addCount<=0){
+      alert('請輸入大於 0 的增加名額');
+      return;
+    }
+    if(alreadyClosed&&!newCloseTime){
+      alert('活動已截止，請設定新的關閉時間');
+      return;
+    }
+
+    try{
+      btn.disabled=true;
+      btn.textContent='正在儲存中...';
+      showSavingNotice('正在儲存中…');
+      const result=await apiPost('increaseCapacity',{eventId,addCount,newCloseTime});
+      hideSavingNotice();
+      closeModal();
+      sessionStorage.removeItem('eson_event_dashboard_cache_v1');
+      toast(`已增加 ${result.added} 個名額，總名額為 ${result.newTotal}`);
+      await loadDashboardFromApi();
+    }catch(err){
+      hideSavingNotice();
+      btn.disabled=false;
+      btn.textContent='確認再次開放';
+      alert('再次開放失敗：'+err.message);
+    }
+  };
 }
 function prettyAnswer(v){if(Array.isArray(v))return v.join('、');if(v&&typeof v==='object')return Object.entries(v).map(([k,x])=>`${k}: ${x}`).join(' / ');return v==null?'':String(v)}
 function filteredResponses(){const q=responseSearch.trim().toLowerCase();return liveResponses.filter(r=>{const a=Object.values(r.answers||{}).map(prettyAnswer).join(' ');const hay=[r.registrationNumber,r.email,a,r.adminNote].join(' ').toLowerCase();return(!q||hay.includes(q))&&(responsePaymentFilter==='all'||r.paymentStatus===responsePaymentFilter)&&(responseStatusFilter==='all'||r.registrationStatus===responseStatusFilter)})}
 function responseRowsHtmlLive(){const rows=filteredResponses();if(!rows.length)return `<tr><td colspan="7"><div class="empty-state">${mi('inbox')}<b>目前沒有符合條件的報名資料</b></div></td></tr>`;return rows.map(r=>{const entries=Object.entries(r.answers||{}).filter(([k])=>k!=='email');const display=entries[0]?prettyAnswer(entries[0][1]):'—';return `<tr data-response-row="${r.responseId}" style="cursor:pointer"><td><b>${esc(r.registrationNumber)}</b></td><td>${esc(display)}</td><td>${esc(r.email)}</td><td>${esc(r.submittedAt)}</td><td><span class="badge ${r.paymentStatus==='已確認'?'open':r.paymentStatus==='已退款'?'closed':'upcoming'}">${esc(r.paymentStatus)}</span></td><td>${esc(r.registrationStatus)}</td><td>${esc(r.adminNote||'—')}</td></tr>`}).join('')}
-async function loadResponsesLive(){const body=document.querySelector('#responseRows');if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('progress_activity')}<b>正在讀取報名資料...</b></div></td></tr>`;try{const d=(await apiGet('getResponses',{eventId:currentEventId})).data;liveResponses=d.items||[];editorBlocks=d.blocks||editorBlocks||[];document.querySelector('#responseEventTitle').textContent=d.event?.name||'報名資料';document.querySelector('#statCapacity').textContent=`${d.stats.acceptedCount} / ${d.stats.totalCapacity}`;document.querySelector('#statPaid').textContent=d.stats.paidConfirmed;document.querySelector('#statUnpaid').textContent=d.stats.unpaid;refreshResponseRowsLive()}catch(err){if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('error')}<b>讀取失敗</b><span>${esc(err.message)}</span></div></td></tr>`}}
+async function loadResponsesLive(){const body=document.querySelector('#responseRows');if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('progress_activity')}<b>正在讀取資料...</b></div></td></tr>`;try{const d=(await apiGet('getResponses',{eventId:currentEventId})).data;liveResponses=d.items||[];editorBlocks=d.blocks||editorBlocks||[];document.querySelector('#responseEventTitle').textContent=d.event?.name||'報名資料';document.querySelector('#statCapacity').textContent=`${d.stats.acceptedCount} / ${d.stats.totalCapacity}`;document.querySelector('#statPaid').textContent=d.stats.paidConfirmed;document.querySelector('#statUnpaid').textContent=d.stats.unpaid;refreshResponseRowsLive()}catch(err){if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('error')}<b>讀取失敗</b><span>${esc(err.message)}</span></div></td></tr>`}}
 function refreshResponseRowsLive(){const body=document.querySelector('#responseRows');if(body)body.innerHTML=responseRowsHtmlLive();document.querySelectorAll('[data-response-row]').forEach(tr=>tr.onclick=()=>openResponseDrawerLive(tr.dataset.responseRow))}
 function renderResponses(){if(!currentEventId){navigate('dashboard');return}app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><button class="btn small" data-nav="dashboard">${mi('arrow_back')} 活動列表</button><h1 id="responseEventTitle" style="margin-top:18px">報名資料</h1><div class="muted">報名資料管理 · KST</div></div><div class="actions"><button class="btn" id="openResponsePublicBtn">${mi('open_in_new')} 開啟表單頁面</button><button class="btn" id="editPublishedFormBtn">編輯表單</button></div></div><div class="response-top compact"><div class="card metric"><div class="muted small">目前名額</div><div class="num" id="statCapacity">—</div><div class="tiny muted">目前報名 / 設定總名額</div></div><div class="card metric"><div class="muted small">已確認入金</div><div class="num" id="statPaid">—</div></div><div class="card metric"><div class="muted small">尚未入金</div><div class="num" id="statUnpaid">—</div></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="responseSearch" placeholder="搜尋 Email、姓名或回答內容"></div><div class="filter-row"><select id="paymentFilter"><option value="all">全部入金狀態</option><option>未確認</option><option>已確認</option><option>已退款</option></select><select id="statusFilter"><option value="all">全部報名狀態</option><option>有效</option><option>取消</option><option>作廢</option></select></div></div><div class="card table-card"><table class="table"><thead><tr><th>編號</th><th>姓名 / 第一回答</th><th>Email</th><th>報名時間（KST）</th><th>入金</th><th>狀態</th><th>備註</th></tr></thead><tbody id="responseRows"></tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#responseSearch').oninput=e=>{responseSearch=e.target.value;refreshResponseRowsLive()};document.querySelector('#paymentFilter').onchange=e=>{responsePaymentFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#statusFilter').onchange=e=>{responseStatusFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#editPublishedFormBtn').onclick=()=>loadEventForEditor(currentEventId);document.querySelector('#openResponsePublicBtn').onclick=()=>{const ev=demoEvents.find(x=>x.id===currentEventId);if(ev?.slug)window.open(PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(ev.slug),'_blank')};loadResponsesLive()}
 function openResponseDrawerLive(responseId){const r=liveResponses.find(x=>x.responseId===responseId);if(!r)return;const answers=Object.entries(r.answers||{}).map(([k,v])=>`<div class="data-pair"><b>${esc(responseQuestionLabel(k))}</b><span>${esc(prettyAnswer(v))}</span></div>`).join('');document.body.insertAdjacentHTML('beforeend',`<div class="drawer-backdrop" id="drawerBg"></div><aside class="drawer" id="drawer"><div class="drawer-head"><div><b style="font-size:20px">${esc(r.registrationNumber)} · ${esc(r.email)}</b><div class="tiny muted">${esc(r.submittedAt)} KST</div></div><button class="btn icon close" id="drawerClose">${mi('close')}</button></div><div class="section-label">報名者提交資料</div>${answers}<div class="section-label">管理資料</div><div class="field"><label>入金狀態</label><select id="drawerPayment"><option ${r.paymentStatus==='未確認'?'selected':''}>未確認</option><option ${r.paymentStatus==='已確認'?'selected':''}>已確認</option><option ${r.paymentStatus==='已退款'?'selected':''}>已退款</option></select></div><div class="field"><label>報名狀態</label><select id="drawerStatus"><option ${r.registrationStatus==='有效'?'selected':''}>有效</option><option ${r.registrationStatus==='取消'?'selected':''}>取消</option><option ${r.registrationStatus==='作廢'?'selected':''}>作廢</option></select></div><div class="field"><label>管理員備註</label><textarea class="notearea" id="drawerNote">${esc(r.adminNote||'')}</textarea></div><button class="btn primary" style="width:100%;margin-top:12px" id="drawerSave">儲存變更</button><button class="btn danger" style="width:100%;margin-top:16px" id="reuseEmailBtn" ${r.allowEmailReuse?'disabled':''}>${r.allowEmailReuse?'已允許此 Email 再次報名':'允許此 Email 再次報名'}</button></aside>`);const close=()=>{document.querySelector('#drawerBg')?.remove();document.querySelector('#drawer')?.remove()};document.querySelector('#drawerClose').onclick=close;document.querySelector('#drawerBg').onclick=close;document.querySelector('#drawerSave').onclick=async()=>{
@@ -454,11 +530,11 @@ function openResponseDrawerLive(responseId){const r=liveResponses.find(x=>x.resp
       }
     };const reuse=document.querySelector('#reuseEmailBtn');if(reuse&&!r.allowEmailReuse)reuse.onclick=()=>{document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="reuseModal"><div class="modal"><h3>允許此 Email 再次報名？</h3><div class="reuse-confirm-note">原本的報名紀錄仍會保留，也不會自動釋放名額。</div><div class="modal-actions"><button class="btn" id="reuseCancel">取消</button><button class="btn danger" id="reuseConfirm">確認允許</button></div></div></div>`);const cm=()=>document.querySelector('#reuseModal')?.remove();document.querySelector('#reuseCancel').onclick=cm;document.querySelector('#reuseConfirm').onclick=async()=>{try{await apiPost('allowEmailReuse',{eventId:currentEventId,responseId:r.responseId});cm();close();toast('此 Email 已可再次報名');loadResponsesLive()}catch(err){alert('操作失敗：'+err.message)}}}}
 
-async function renderPublicHome(){app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="public-content"><div class="event-title">ESON Events</div><div class="event-desc">活動報名列表</div><div id="publicEventList"><div class="muted">Loading...</div></div></div></section></div>`;try{const events=(await apiGet('listPublicEvents')).events||[];const el=document.querySelector('#publicEventList');if(!events.length){el.innerHTML='<div class="info-box">目前沒有公開活動。</div>';return}el.innerHTML=events.map(e=>{const s={open:'開放中',notstarted:'尚未開放',full:'已額滿',closed:'已截止',paused:'暫停'}[e.state]||e.state;return `<button class="card" data-public-slug="${esc(e.slug)}" style="width:100%;text-align:left;padding:18px;margin-top:12px;cursor:pointer"><b style="font-size:18px">${esc(e.name)}</b><div class="tiny muted" style="margin-top:6px">${esc(s)}${e.showRegistrationCount?` · ${e.acceptedCount}/${e.totalCapacity}`:''}</div></button>`}).join('');document.querySelectorAll('[data-public-slug]').forEach(b=>b.onclick=()=>location.href=PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(b.dataset.publicSlug))}catch(err){document.querySelector('#publicEventList').innerHTML=`<div class="info-box">目前無法讀取活動列表：${esc(err.message)}</div>`}}
+async function renderPublicHome(){app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="public-content"><div class="event-title">ESON Events</div><div class="event-desc">活動報名列表</div><div id="publicEventList"><div class="muted">正在讀取資料...</div></div></div></section></div>`;try{const events=(await apiGet('listPublicEvents')).events||[];const el=document.querySelector('#publicEventList');if(!events.length){el.innerHTML='<div class="info-box">目前沒有公開活動。</div>';return}el.innerHTML=events.map(e=>{const s={open:'開放中',notstarted:'尚未開放',full:'已額滿',closed:'已截止',paused:'暫停'}[e.state]||e.state;return `<button class="card" data-public-slug="${esc(e.slug)}" style="width:100%;text-align:left;padding:18px;margin-top:12px;cursor:pointer"><b style="font-size:18px">${esc(e.name)}</b><div class="tiny muted" style="margin-top:6px">${esc(s)}${e.showRegistrationCount?` · ${e.acceptedCount}/${e.totalCapacity}`:''}</div></button>`}).join('');document.querySelectorAll('[data-public-slug]').forEach(b=>b.onclick=()=>location.href=PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(b.dataset.publicSlug))}catch(err){document.querySelector('#publicEventList').innerHTML=`<div class="info-box">目前無法讀取活動列表：${esc(err.message)}</div>`}}
 
 async function loadPublicEventBySlug(slug){
   currentPublicSlug=slug;
-  app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('progress_activity')}</div><h2>Loading...</h2></div></section></div>`;
+  app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('progress_activity')}</div><h2>正在讀取資料...</h2></div></section></div>`;
   try{
     const data=await apiGet('getPublicEvent',{slug});
     const detail=data.event;
