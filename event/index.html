@@ -98,8 +98,16 @@ async function apiGet(action, params={}, attempt=0){
   const u=new URL(API_URL);
   u.searchParams.set('action',action);
   Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)u.searchParams.set(k,v)});
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
   try{
-    const res=await fetch(u.toString(),{method:'GET',redirect:'follow',cache:'no-store'});
+    const res=await fetch(u.toString(),{
+      method:'GET',
+      redirect:'follow',
+      cache:'no-store',
+      signal:controller.signal
+    });
+    clearTimeout(timer);
     if((res.status===404||res.status===503)&&attempt<1){
       await new Promise(r=>setTimeout(r,700));
       return apiGet(action,params,attempt+1);
@@ -109,34 +117,34 @@ async function apiGet(action, params={}, attempt=0){
     if(!data.success)throw new Error(data.error||'API error');
     return data;
   }catch(err){
-    if(attempt<1){
+    clearTimeout(timer);
+    if(attempt<1 && (err.name==='AbortError'||String(err.message||'').includes('Failed to fetch'))){
       await new Promise(r=>setTimeout(r,700));
       return apiGet(action,params,attempt+1);
     }
+    if(err.name==='AbortError')throw new Error('讀取逾時，請稍後再試');
     throw err;
   }
 }
-async function apiPost(action,payload={},attempt=0){
+async function apiPost(action,payload={}){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),15000);
   try{
     const res=await fetch(API_URL,{
       method:'POST',
       redirect:'follow',
       cache:'no-store',
+      signal:controller.signal,
       body:JSON.stringify({action,...payload})
     });
-    if((res.status===404||res.status===503)&&attempt<1){
-      await new Promise(r=>setTimeout(r,700));
-      return apiPost(action,payload,attempt+1);
-    }
+    clearTimeout(timer);
     if(!res.ok)throw new Error('API HTTP '+res.status);
     const data=await res.json();
     if(!data.success)throw new Error(data.error||'API error');
     return data.result;
   }catch(err){
-    if(attempt<1){
-      await new Promise(r=>setTimeout(r,700));
-      return apiPost(action,payload,attempt+1);
-    }
+    clearTimeout(timer);
+    if(err.name==='AbortError')throw new Error('儲存逾時，請重新整理確認資料是否已成功更新');
     throw err;
   }
 }
@@ -516,7 +524,11 @@ function showCapacityModal(eventId){
       hideSavingNotice();
       closeModal();
       sessionStorage.removeItem('eson_event_dashboard_cache_v1');
-      toast(`已增加 ${result.added} 個名額，總名額為 ${result.newTotal}`);
+      if(result&&typeof result.added!=='undefined'&&typeof result.newTotal!=='undefined'){
+        toast(`已增加 ${result.added} 個名額，總名額為 ${result.newTotal}`);
+      }else{
+        toast('再次開放設定已儲存，正在重新讀取最新資料');
+      }
       await loadDashboardFromApi();
     }catch(err){
       hideSavingNotice();
@@ -526,8 +538,12 @@ function showCapacityModal(eventId){
     }
   };
 }
+let liveResponses=[];
+let responseSearchText='';
+let responsePaymentFilter='all';
+let responseStatusFilter='all';
 function prettyAnswer(v){if(Array.isArray(v))return v.join('、');if(v&&typeof v==='object')return Object.entries(v).map(([k,x])=>`${k}: ${x}`).join(' / ');return v==null?'':String(v)}
-function filteredResponses(){const q=String(responseSearchText||'').trim().toLowerCase();return liveResponses.filter(r=>{const a=Object.values(r.answers||{}).map(prettyAnswer).join(' ');const hay=[r.registrationNumber,r.email,a,r.adminNote].join(' ').toLowerCase();return(!q||hay.includes(q))&&(responsePaymentFilter==='all'||r.paymentStatus===responsePaymentFilter)&&(responseStatusFilter==='all'||r.registrationStatus===responseStatusFilter)})}
+function filteredResponses(){const q=String(typeof responseSearchText==='undefined'?'':responseSearchText).trim().toLowerCase();return liveResponses.filter(r=>{const a=Object.values(r.answers||{}).map(prettyAnswer).join(' ');const hay=[r.registrationNumber,r.email,a,r.adminNote].join(' ').toLowerCase();return(!q||hay.includes(q))&&(responsePaymentFilter==='all'||r.paymentStatus===responsePaymentFilter)&&(responseStatusFilter==='all'||r.registrationStatus===responseStatusFilter)})}
 function responseRowsHtmlLive(){const rows=filteredResponses();if(!rows.length)return `<tr><td colspan="7"><div class="empty-state">${mi('inbox')}<b>目前沒有符合條件的報名資料</b></div></td></tr>`;return rows.map(r=>{const entries=Object.entries(r.answers||{}).filter(([k])=>k!=='email');const display=entries[0]?prettyAnswer(entries[0][1]):'—';return `<tr data-response-row="${r.responseId}" style="cursor:pointer"><td><b>${esc(r.registrationNumber)}</b></td><td>${esc(display)}</td><td>${esc(r.email)}</td><td>${esc(r.submittedAt)}</td><td><span class="badge ${r.paymentStatus==='已確認'?'open':r.paymentStatus==='已退款'?'closed':'upcoming'}">${esc(r.paymentStatus)}</span></td><td>${esc(r.registrationStatus)}</td><td>${esc(r.adminNote||'—')}</td></tr>`}).join('')}
 async function loadResponsesLive(){const body=document.querySelector('#responseRows');if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('progress_activity')}<b>正在讀取資料...</b></div></td></tr>`;try{const d=(await apiGet('getResponses',{eventId:currentEventId})).data;liveResponses=d.items||[];editorBlocks=d.blocks||editorBlocks||[];document.querySelector('#responseEventTitle').textContent=d.event?.name||'報名資料';document.querySelector('#statCapacity').textContent=`${d.stats.acceptedCount} / ${d.stats.totalCapacity}`;document.querySelector('#statPaid').textContent=d.stats.paidConfirmed;document.querySelector('#statUnpaid').textContent=d.stats.unpaid;refreshResponseRowsLive()}catch(err){if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('error')}<b>讀取失敗</b><span>${esc(err.message)}</span></div></td></tr>`}}
 function refreshResponseRowsLive(){const body=document.querySelector('#responseRows');if(body)body.innerHTML=responseRowsHtmlLive();document.querySelectorAll('[data-response-row]').forEach(tr=>tr.onclick=()=>openResponseDrawerLive(tr.dataset.responseRow))}
@@ -563,10 +579,12 @@ async function renderPublicHome(){app.innerHTML=`<div class="public-shell"><sect
 
 async function loadPublicEventBySlug(slug){
   currentPublicSlug=slug;
-  app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('progress_activity')}</div><h2>正在讀取資料...</h2></div></section></div>`;
+  app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('progress_activity')}</div><h2>正在讀取資料...</h2><p class="muted">請稍候</p></div></section></div>`;
   try{
     const data=await apiGet('getPublicEvent',{slug});
-    const detail=data.event;
+    const detail=data&&data.event;
+    if(!detail||!detail.event)throw new Error('活動資料格式不完整');
+
     currentEventId=detail.event.eventId;
     activityConfig={
       name:detail.event.name||'',
@@ -577,15 +595,18 @@ async function loadPublicEventBySlug(slug){
       showInList:detail.event.showInEventList!==false,
       showCount:detail.event.showRegistrationCount!==false
     };
-    editorBlocks=detail.blocks||[];
+    editorBlocks=Array.isArray(detail.blocks)?detail.blocks:[];
     successNote=detail.pages?.success?.note||'';
+
     if(detail.state==='notstarted')return renderStatus('notstarted');
     if(detail.state==='full')return renderStatus('full');
     if(detail.state==='closed')return renderStatus('closed');
     if(detail.state==='paused')return renderStatus('paused');
+    if(detail.state!=='open')throw new Error('活動目前無法開啟');
+
     renderPublic();
   }catch(err){
-    app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('error')}</div><h2>無法開啟表單</h2><p>${esc(err.message)}</p></div></section></div>`;
+    app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('error')}</div><h2>無法開啟表單</h2><p>${esc(err.message||'讀取失敗')}</p><button class="btn primary" onclick="location.reload()">重新讀取</button></div></section></div>`;
   }
 }
 function publicAnswerName(id){return 'ans_'+String(id).replace(/[^A-Za-z0-9_-]/g,'_')}
