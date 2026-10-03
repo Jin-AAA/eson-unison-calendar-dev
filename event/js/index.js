@@ -55,59 +55,11 @@ const responses=[
 ];
 
 
-async function apiGet(action, params={}, attempt=0){
-  const u=new URL(API_URL);
-  u.searchParams.set('action',action);
-  Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)u.searchParams.set(k,v)});
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),12000);
-  try{
-    const res=await fetch(u.toString(),{
-      method:'GET',
-      redirect:'follow',
-      cache:'no-store',
-      signal:controller.signal
-    });
-    clearTimeout(timer);
-    if((res.status===404||res.status===503)&&attempt<1){
-      await new Promise(r=>setTimeout(r,700));
-      return apiGet(action,params,attempt+1);
-    }
-    if(!res.ok)throw new Error('API HTTP '+res.status);
-    const data=await res.json();
-    if(!data.success)throw new Error(data.error||'API error');
-    return data;
-  }catch(err){
-    clearTimeout(timer);
-    if(attempt<1 && (err.name==='AbortError'||String(err.message||'').includes('Failed to fetch'))){
-      await new Promise(r=>setTimeout(r,700));
-      return apiGet(action,params,attempt+1);
-    }
-    if(err.name==='AbortError')throw new Error('讀取逾時，請稍後再試');
-    throw err;
-  }
+async function apiGet(action,params={}) {
+  return window.EsonFirebase.apiGet(action,params);
 }
-async function apiPost(action,payload={}){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),15000);
-  try{
-    const res=await fetch(API_URL,{
-      method:'POST',
-      redirect:'follow',
-      cache:'no-store',
-      signal:controller.signal,
-      body:JSON.stringify({action,...payload})
-    });
-    clearTimeout(timer);
-    if(!res.ok)throw new Error('API HTTP '+res.status);
-    const data=await res.json();
-    if(!data.success)throw new Error(data.error||'API error');
-    return data.result;
-  }catch(err){
-    clearTimeout(timer);
-    if(err.name==='AbortError')throw new Error('儲存逾時，請重新整理確認資料是否已成功更新');
-    throw err;
-  }
+async function apiPost(action,payload={}) {
+  return window.EsonFirebase.apiPost(action,payload);
 }
 function apiDateValue(v=''){
   if(!v)return '';
@@ -246,7 +198,7 @@ async function saveCurrentEvent(showToast=true){
     paused:false
   }});
   currentEventId=result.eventId;
-  if(showToast)toast('活動基本資料已寫入 Google Sheet');
+  if(showToast)toast('活動基本資料已儲存');
   return result;
 }
 async function saveCurrentBlocks(){
@@ -301,6 +253,7 @@ async function savePublishedEditLive(){
     await saveCurrentEvent(false);
     await saveCurrentBlocks();
     await saveCurrentSuccessPage();
+    await apiPost('syncPublishedEvent',{eventId:currentEventId});
     sessionStorage.removeItem('eson_event_dashboard_cache_v1');toast('編輯內容已儲存');
   }catch(err){
     alert('儲存失敗：'+err.message);
@@ -316,12 +269,33 @@ function adminLangName(code=adminUiLang){return ({zh:'中文',ko:'한국어',en:
 function topbar(){return `<div class="topbar"><div class="brand"><div class="brandmark">E</div><span>${ADMIN_TITLE}</span></div><div class="top-actions"><div class="timezone-label">${mi('schedule')} KST (UTC+9)</div><div class="menu-wrap"><button class="btn profile-btn lang-btn" id="adminLangBtn">${adminLangName()} ${mi('arrow_drop_down')}</button><div class="dropdown-menu lang-menu" id="adminLangMenu"><button class="menu-item ${adminUiLang==='zh'?'active':''}" data-admin-lang="zh">中文</button><button class="menu-item ${adminUiLang==='ko'?'active':''}" data-admin-lang="ko">한국어</button><button class="menu-item ${adminUiLang==='en'?'active':''}" data-admin-lang="en">English</button></div></div><div class="menu-wrap"><button class="btn profile-btn" id="profileBtn">Jiin ${mi('arrow_drop_down')}</button><div class="dropdown-menu profile-menu" id="profileMenu"><div class="menu-title">Jiin · Owner</div><button class="menu-item" id="myAccountBtn">${mi('person')} 我的帳號</button><button class="menu-item" id="adminManageBtn">${mi('manage_accounts')} 管理員管理</button><div class="menu-sep"></div><button class="menu-item" data-nav="login">${mi('logout')} 登出</button></div></div></div></div>`}
 
 function loginStrings(){return {
- zh:{title:'管理員登入',desc:'登入後即可管理活動與報名資料。',account:'帳號',password:'密碼',login:'登入',note:'此原型不會真的驗證帳號。正式版將使用 Firebase Authentication，並區分 Owner 與 Admin 權限。'},
- ko:{title:'관리자 로그인',desc:'로그인 후 이벤트와 신청 데이터를 관리할 수 있습니다.',account:'계정',password:'비밀번호',login:'로그인',note:'이 프로토타입에서는 실제 계정을 인증하지 않습니다. 정식 버전은 Firebase Authentication을 사용하며 Owner와 Admin 권한을 구분합니다.'},
- en:{title:'Admin Login',desc:'Sign in to manage events and registration data.',account:'Account',password:'Password',login:'Sign in',note:'This prototype does not validate real accounts. The production version will use Firebase Authentication with separate Owner and Admin permissions.'}
+ zh:{title:'管理員登入',desc:'登入後即可管理活動與報名資料。',account:'帳號',password:'密碼',login:'登入',note:'使用 Firebase Authentication 登入，Owner 與 Admin 權限由系統管理。'},
+ ko:{title:'관리자 로그인',desc:'로그인 후 이벤트와 신청 데이터를 관리할 수 있습니다.',account:'계정',password:'비밀번호',login:'로그인',note:'Firebase Authentication으로 로그인하며 Owner와 Admin 권한을 구분합니다.'},
+ en:{title:'Admin Login',desc:'Sign in to manage events and registration data.',account:'Account',password:'Password',login:'Sign in',note:'Sign in with Firebase Authentication. Owner and Admin permissions are managed by the system.'}
 }[adminUiLang]||this.zh}
 function loginLangMenu(){return `<div class="login-lang-wrap menu-wrap"><button class="btn profile-btn lang-btn" id="loginLangBtn">${adminLangName()} ${mi('arrow_drop_down')}</button><div class="dropdown-menu lang-menu" id="loginLangMenu"><button class="menu-item ${adminUiLang==='zh'?'active':''}" data-login-lang="zh">中文</button><button class="menu-item ${adminUiLang==='ko'?'active':''}" data-login-lang="ko">한국어</button><button class="menu-item ${adminUiLang==='en'?'active':''}" data-login-lang="en">English</button></div></div>`}
-function renderLogin(){const t=loginStrings();app.innerHTML=`<div class="login-wrap"><section class="login-panel">${loginLangMenu()}<div class="login-box"><div class="brand login-brand"><span>${ADMIN_TITLE}</span></div><h2>${t.title}</h2><p class="muted">${t.desc}</p><div class="field"><label>${t.account}</label><input value="jiin" /></div><div class="field"><label>${t.password}</label><input type="password" value="12345678" /></div><button class="btn primary" id="loginSubmitBtn" style="width:100%;margin-top:7px">${t.login}</button><div class="login-note">${t.note}</div></div></section></div>${protoNav()}`;bind();bindLoginLang();const loginBtn=document.querySelector('#loginSubmitBtn');if(loginBtn)loginBtn.onclick=()=>navigate('dashboard');}
+function renderLogin(){
+  const t=loginStrings();
+  app.innerHTML=`<div class="login-wrap"><section class="login-panel">${loginLangMenu()}<div class="login-box"><div class="brand login-brand"><span>${ADMIN_TITLE}</span></div><h2>${t.title}</h2><p class="muted">${t.desc}</p><div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label>${t.password}</label><input id="loginPassword" type="password" autocomplete="current-password"></div><button class="btn primary" id="loginSubmitBtn" style="width:100%;margin-top:7px">${t.login}</button><div class="login-note">Firebase Authentication</div></div></section></div>${protoNav()}`;
+  bind();
+  bindLoginLang();
+  const loginBtn=document.querySelector('#loginSubmitBtn');
+  if(loginBtn)loginBtn.onclick=async()=>{
+    const email=document.querySelector('#loginEmail').value;
+    const password=document.querySelector('#loginPassword').value;
+    try{
+      loginBtn.disabled=true;
+      loginBtn.textContent='登入中...';
+      await window.EsonFirebase.login(email,password);
+      navigate('dashboard');
+    }catch(err){
+      alert('登入失敗：'+err.message);
+    }finally{
+      loginBtn.disabled=false;
+      loginBtn.textContent=t.login;
+    }
+  };
+}
 function bindLoginLang(){const btn=document.querySelector('#loginLangBtn'),menu=document.querySelector('#loginLangMenu');if(!btn||!menu)return;btn.onclick=e=>{e.stopPropagation();menu.classList.toggle('open')};document.querySelectorAll('[data-login-lang]').forEach(x=>x.onclick=()=>{adminUiLang=x.dataset.loginLang;renderLogin()});document.addEventListener('click',()=>menu.classList.remove('open'),{once:true});}
 function dashboardRows(){const q=(dashboardQuery||'').trim().toLowerCase();return demoEvents.filter(e=>{const statusPass=dashboardFilter==='all'||(dashboardFilter==='open'&&e.status==='open')||(dashboardFilter==='upcoming'&&e.status==='upcoming')||(dashboardFilter==='ended'&&e.status==='closed')||(dashboardFilter==='draft'&&e.status==='draft');const haystack=(e.name+' '+(e.slug||'')+' /event/'+(e.slug||'')).toLowerCase();const queryPass=!q||haystack.includes(q);return statusPass&&queryPass})}
 function dashboardTableHtml(){const rows=dashboardRows(); if(!rows.length)return `<tr><td colspan="6"><div class="empty-state">${mi('search_off')}<b>找不到符合條件的活動</b><span>請調整搜尋關鍵字或篩選條件。</span></div></td></tr>`;return rows.map(e=>{const publicCell=e.status==='draft'?`<span class="unpublished-label">${mi('hide_source')} 尚未發布</span>`:`<button class="btn small" data-open-public="${e.id}" title="開啟 https://eson1228.com/event/${e.slug}/">${mi('open_in_new')} 開啟前台</button>`;return `<tr><td><b>${e.name}</b><div class="tiny muted" style="margin-top:4px">${e.status==='draft'?'尚未產生公開網址':'/event/'+e.slug+'/'}</div></td><td><span class="badge ${e.status}">${e.label}</span></td><td>${e.range}</td><td><b>${e.count} / ${e.cap}</b><div class="progress"><i style="width:${Math.min(100,e.count/e.cap*100)}%"></i></div></td><td>${publicCell}</td><td><div class="row-actions"><button class="btn small" data-edit-event="${e.id}">編輯</button>${e.status==='draft'?'':`<button class="btn small" data-view-responses="${e.id}">查看資料</button>`}${['full','closed'].includes(e.status)?'<button class="btn small soft" data-capacity="'+e.id+'">再次開放增收</button>':''}</div></td></tr>`}).join('')}
@@ -707,7 +681,46 @@ function showSavingNotice(text='正在儲存中…'){
 function hideSavingNotice(){document.querySelector('.saving-notice')?.remove();}
 function toast(text){document.querySelector('.toast')?.remove();document.body.insertAdjacentHTML('beforeend',`<div class="toast">${mi('check_circle')} ${text}</div>`);setTimeout(()=>document.querySelector('.toast')?.remove(),2200)}
 
-function bind(){const sel=document.querySelector('#protoSelect');if(sel){const route=location.hash.replace('#','')||'login';sel.value=route;sel.onchange=()=>navigate(sel.value)}document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>navigate(b.dataset.nav));}
+function bind(){
+  const sel=document.querySelector('#protoSelect');
+  if(sel){
+    const route=location.hash.replace('#','')||'login';
+    sel.value=route;
+    sel.onchange=()=>navigate(sel.value);
+  }
+  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=async()=>{
+    const route=b.dataset.nav;
+    if(route==='login'&&IS_ADMIN_PATH&&window.EsonFirebase?.currentUser()){
+      await window.EsonFirebase.logout();
+    }
+    navigate(route);
+  });
+}
 function navigate(route){previewFromEditor=false;location.hash=route;renderRoute()}
-function renderRoute(){const publicSlug=new URLSearchParams(location.search).get('event');if(!IS_ADMIN_PATH){if(publicSlug)loadPublicEventBySlug(publicSlug);else renderPublicHome();return}const r=location.hash.replace('#','')||'login';({login:renderLogin,dashboard:renderDashboard,editor:renderEditor,responses:renderResponses,public:renderPublic,success:renderSuccess,notstarted:()=>renderStatus('notstarted'),full:()=>renderStatus('full'),closed:()=>renderStatus('closed'),paused:()=>renderStatus('paused')}[r]||renderLogin)()}
-window.addEventListener('hashchange',renderRoute);renderRoute();
+async function renderRoute(){
+  const publicSlug=new URLSearchParams(location.search).get('event');
+  if(!IS_ADMIN_PATH){
+    if(publicSlug)loadPublicEventBySlug(publicSlug);
+    else renderPublicHome();
+    return;
+  }
+
+  await window.EsonFirebase.ready();
+  const r=location.hash.replace('#','')||'login';
+  const user=window.EsonFirebase.currentUser();
+
+  if(r!=='login'&&!user){
+    if(location.hash!=='#login')location.hash='login';
+    renderLogin();
+    return;
+  }
+  if(r==='login'&&user){
+    if(location.hash!=='#dashboard')location.hash='dashboard';
+    renderDashboard();
+    return;
+  }
+
+  ({login:renderLogin,dashboard:renderDashboard,editor:renderEditor,responses:renderResponses,public:renderPublic,success:renderSuccess,notstarted:()=>renderStatus('notstarted'),full:()=>renderStatus('full'),closed:()=>renderStatus('closed'),paused:()=>renderStatus('paused')}[r]||renderLogin)();
+}
+window.addEventListener('hashchange',()=>renderRoute());
+renderRoute();
