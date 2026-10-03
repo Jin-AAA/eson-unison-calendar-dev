@@ -26,3 +26,6 @@
 #responseRows tr[data-response-row] { transition: background-color .15s ease; }
 #responseRows tr[data-response-row]:hover { background: #f7fbff; }
 #responseRows tr[data-response-row]:focus { outline: 2px solid #3b88df; outline-offset: -2px; }
+
+/* Production cleanup */
+.prototype-nav{display:none!important}

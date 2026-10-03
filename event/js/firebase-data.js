@@ -53,7 +53,10 @@
     if (/^\d{4}[/-]\d{2}[/-]\d{2}\s\d{2}:\d{2}/.test(s)) {
       return new Date(s.replace(/\//g, '-').replace(' ', 'T') + ':00+09:00');
     }
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s) && !/[zZ]|[+-]\d{2}:\d{2}$/.test(s)) {
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s) && !/[zZ]|[+-]\d{2}:\d{2}$/.test(s)) {
+      return new Date(s + '+09:00');
+    }
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s) && !/[zZ]|[+-]\d{2}:\d{2}$/.test(s)) {
       return new Date(s + ':00+09:00');
     }
     return new Date(s);
