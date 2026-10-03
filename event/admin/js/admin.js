@@ -97,6 +97,30 @@ function formatRange(e){
   const b=String(e.closeTime||'').replace(/-/g,'/').slice(5,16);
   return `${a||'—'} — ${b||'—'}`;
 }
+
+function formatKstRange(v, omitYear=false){
+  if(!v)return '—';
+  const d=new Date(v);
+  if(Number.isNaN(d.getTime()))return String(v);
+
+  const parts=new Intl.DateTimeFormat('en-CA',{
+    timeZone:'Asia/Seoul',
+    year:'numeric',
+    month:'2-digit',
+    day:'2-digit',
+    hour:'2-digit',
+    minute:'2-digit',
+    hour12:false
+  }).formatToParts(d);
+
+  const get=t=>parts.find(x=>x.type===t)?.value||'';
+  const date=omitYear
+    ? `${get('month')}/${get('day')}`
+    : `${get('year')}/${get('month')}/${get('day')}`;
+
+  return `${date} ${get('hour')}:${get('minute')}`;
+}
+
 function apiEventToUi(e){
   const dynamicState=window.EsonFirebase?.computeState ? window.EsonFirebase.computeState(e) : (e.status||'draft');
   const statusMap={
@@ -123,7 +147,7 @@ function apiEventToUi(e){
 
 function getDashboardLocalCache(){
   try{
-    const raw=sessionStorage.getItem('eson_event_dashboard_cache_v1');
+    const raw=sessionStorage.getItem('eson_event_dashboard_cache_v2');
     if(!raw)return null;
     const parsed=JSON.parse(raw);
     if(!parsed||!Array.isArray(parsed.events))return null;
@@ -132,7 +156,7 @@ function getDashboardLocalCache(){
 }
 function setDashboardLocalCache(events){
   try{
-    sessionStorage.setItem('eson_event_dashboard_cache_v1',JSON.stringify({
+    sessionStorage.setItem('eson_event_dashboard_cache_v2',JSON.stringify({
       savedAt:Date.now(),
       events:events
     }));
@@ -244,7 +268,7 @@ async function saveDraftLive(){
     await saveCurrentEvent(false);
     await saveCurrentBlocks();
     await saveCurrentSuccessPage();
-    sessionStorage.removeItem('eson_event_dashboard_cache_v1');toast('草稿已儲存');
+    sessionStorage.removeItem('eson_event_dashboard_cache_v2');toast('草稿已儲存');
   }catch(err){
     alert('儲存失敗：'+err.message);
   }finally{
@@ -261,7 +285,7 @@ async function publishLive(){
     await saveCurrentSuccessPage();
     await apiPost('publishEvent',{eventId:currentEventId});
     editorPublished=true;
-    sessionStorage.removeItem('eson_event_dashboard_cache_v1');toast('活動已發布');
+    sessionStorage.removeItem('eson_event_dashboard_cache_v2');toast('活動已發布');
     setTimeout(()=>navigate('dashboard'),500);
   }catch(err){
     alert('發布失敗：'+err.message);
@@ -278,7 +302,7 @@ async function savePublishedEditLive(){
     await saveCurrentBlocks();
     await saveCurrentSuccessPage();
     await apiPost('syncPublishedEvent',{eventId:currentEventId});
-    sessionStorage.removeItem('eson_event_dashboard_cache_v1');toast('編輯內容已儲存');
+    sessionStorage.removeItem('eson_event_dashboard_cache_v2');toast('編輯內容已儲存');
   }catch(err){
     alert('儲存失敗：'+err.message);
   }finally{
@@ -482,7 +506,7 @@ function showCapacityModal(eventId){
       const result=await apiPost('increaseCapacity',{eventId,addCount,newCloseTime});
       hideSavingNotice();
       closeModal();
-      sessionStorage.removeItem('eson_event_dashboard_cache_v1');
+      sessionStorage.removeItem('eson_event_dashboard_cache_v2');
       if(result&&typeof result.added!=='undefined'&&typeof result.newTotal!=='undefined'){
         toast(`已增加 ${result.added} 個名額，總名額為 ${result.newTotal}`);
       }else{
