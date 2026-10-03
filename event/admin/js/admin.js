@@ -98,26 +98,25 @@ function formatRange(e){
   return `${a||'—'} — ${b||'—'}`;
 }
 function apiEventToUi(e){
-  let status='draft',label='草稿';
-  if(e.status!=='draft'){
-    const now=new Date();
-    const start=e.openTime?new Date(String(e.openTime).replace(/\//g,'-').replace(' ','T')+'+09:00'):null;
-    const end=e.closeTime?new Date(String(e.closeTime).replace(/\//g,'-').replace(' ','T')+'+09:00'):null;
-    if(e.paused){status='closed';label='已暫停'}
-    else if(Number(e.acceptedCount)>=Number(e.totalCapacity)&&Number(e.totalCapacity)>0){status='full';label='已額滿'}
-    else if(start&&now<start){status='upcoming';label='尚未開放'}
-    else if(end&&now>=end){status='closed';label='已截止'}
-    else {status='open';label='開放中'}
-  }
+  const dynamicState=window.EsonFirebase?.computeState ? window.EsonFirebase.computeState(e) : (e.status||'draft');
+  const statusMap={
+    draft:{status:'draft',label:'草稿'},
+    open:{status:'open',label:'開放中'},
+    notstarted:{status:'upcoming',label:'尚未開放'},
+    full:{status:'full',label:'已額滿'},
+    closed:{status:'closed',label:'已截止'},
+    paused:{status:'paused',label:'暫停'}
+  };
+  const mapped=statusMap[dynamicState]||statusMap.draft;
   return {
     id:e.eventId,
-    name:e.name||'未命名活動',
-    status,label,
-    range:formatRange(e),
-    count:Number(e.acceptedCount)||0,
-    cap:Number(e.totalCapacity)||Number(e.initialCapacity)||0,
-    paid:0,
+    name:e.name||'',
     slug:e.slug||'',
+    status:mapped.status,
+    label:mapped.label,
+    range:`${formatKstRange(e.openTime)} — ${formatKstRange(e.closeTime,true)}`,
+    count:Number(e.acceptedCount)||0,
+    cap:Number(e.totalCapacity)||0,
     raw:e
   };
 }
@@ -322,7 +321,7 @@ function renderLogin(){
   };
 }
 function bindLoginLang(){const btn=document.querySelector('#loginLangBtn'),menu=document.querySelector('#loginLangMenu');if(!btn||!menu)return;btn.onclick=e=>{e.stopPropagation();menu.classList.toggle('open')};document.querySelectorAll('[data-login-lang]').forEach(x=>x.onclick=()=>{adminUiLang=x.dataset.loginLang;renderLogin()});document.addEventListener('click',()=>menu.classList.remove('open'),{once:true});}
-function dashboardRows(){const q=(dashboardQuery||'').trim().toLowerCase();return demoEvents.filter(e=>{const statusPass=dashboardFilter==='all'||(dashboardFilter==='open'&&e.status==='open')||(dashboardFilter==='upcoming'&&e.status==='upcoming')||(dashboardFilter==='ended'&&e.status==='closed')||(dashboardFilter==='draft'&&e.status==='draft');const haystack=(e.name+' '+(e.slug||'')+' /event/'+(e.slug||'')).toLowerCase();const queryPass=!q||haystack.includes(q);return statusPass&&queryPass})}
+function dashboardRows(){const q=(dashboardQuery||'').trim().toLowerCase();return demoEvents.filter(e=>{const statusPass=dashboardFilter==='all'||(dashboardFilter==='open'&&e.status==='open')||(dashboardFilter==='upcoming'&&e.status==='upcoming')||(dashboardFilter==='ended'&&['closed','full'].includes(e.status))||(dashboardFilter==='draft'&&e.status==='draft');const haystack=(e.name+' '+(e.slug||'')+' /event/'+(e.slug||'')).toLowerCase();const queryPass=!q||haystack.includes(q);return statusPass&&queryPass})}
 function dashboardTableHtml(){const rows=dashboardRows(); if(!rows.length)return `<tr><td colspan="6"><div class="empty-state">${mi('search_off')}<b>找不到符合條件的活動</b><span>請調整搜尋關鍵字或篩選條件。</span></div></td></tr>`;return rows.map(e=>{const publicCell=e.status==='draft'?`<span class="unpublished-label">${mi('hide_source')} 尚未發布</span>`:`<button class="btn small" data-open-public="${e.id}" title="開啟 https://eson1228.com/event/${e.slug}/">${mi('open_in_new')} 開啟前台</button>`;return `<tr><td><b>${e.name}</b><div class="tiny muted" style="margin-top:4px">${e.status==='draft'?'尚未產生公開網址':'/event/'+e.slug+'/'}</div></td><td><span class="badge ${e.status}">${e.label}</span></td><td>${e.range}</td><td><b>${e.count} / ${e.cap}</b><div class="progress"><i style="width:${Math.min(100,e.count/e.cap*100)}%"></i></div></td><td>${publicCell}</td><td><div class="row-actions"><button class="btn small" data-edit-event="${e.id}">編輯</button>${e.status==='draft'?'':`<button class="btn small" data-view-responses="${e.id}">查看資料</button>`}${['full','closed'].includes(e.status)?'<button class="btn small soft" data-capacity="'+e.id+'">再次開放增收</button>':''}</div></td></tr>`}).join('')}
 function renderDashboard(){app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><h1>活動管理</h1><div class="muted">所有時間皆以 KST（UTC+9）顯示</div></div><div class="actions"><button class="btn primary" data-nav="editor">${mi('add')}新增活動</button></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="dashboardSearch" placeholder="搜尋活動名稱或網址" value="${dashboardQuery.replaceAll('"','&quot;')}" /></div><div class="seg" id="dashboardFilters"><button data-filter="all" class="${dashboardFilter==='all'?'active':''}">全部</button><button data-filter="open" class="${dashboardFilter==='open'?'active':''}">開放中</button><button data-filter="upcoming" class="${dashboardFilter==='upcoming'?'active':''}">未開始</button><button data-filter="ended" class="${dashboardFilter==='ended'?'active':''}">已結束</button><button data-filter="draft" class="${dashboardFilter==='draft'?'active':''}">草稿</button></div></div><div class="card table-card"><table class="table"><thead><tr><th>活動名稱</th><th>狀態</th><th>報名期間（KST）</th><th>報名</th><th>前台頁面</th><th>操作</th></tr></thead><tbody id="eventRows">${dashboardTableHtml()}</tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#dashboardSearch').addEventListener('input',e=>{dashboardQuery=e.target.value;refreshDashboardRows()});document.querySelectorAll('#dashboardFilters [data-filter]').forEach(b=>b.onclick=()=>{dashboardFilter=b.dataset.filter;document.querySelectorAll('#dashboardFilters button').forEach(x=>x.classList.toggle('active',x===b));refreshDashboardRows()});bindCapacityButtons();bindDashboardEditors();bindPublicButtons();loadDashboardFromApi();}
 function refreshDashboardRows(){document.querySelector('#eventRows').innerHTML=dashboardTableHtml();bind();bindCapacityButtons();bindDashboardEditors();bindPublicButtons();}
@@ -744,17 +743,46 @@ function publicBlockHtml(b){
 function renderPublic(){const t=i18n[currentLang];app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="public-content"><div class="event-title">${esc(activityConfig.name)}</div><div class="info-box"><b>${t.open}</b><br>${t.deadline}: ${activityConfig.end.replace('T',' ')} KST (UTC+9)</div>${editorBlocks.map(publicBlockHtml).join('')}<button class="public-submit" id="submitBtn">${t.submit}</button></div></section></div>${protoNav()}`;bind();langOptSelected();document.querySelector('#submitBtn').onclick=()=>previewFromEditor?toast('預覽模式不會真的送出資料'):showConfirm();}
 function showConfirm(){const t=i18n[currentLang];const answers=collectPublicAnswers();const err=validatePublicAnswers(answers);if(err){alert(err);return}document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="confirmModal"><div class="modal"><h3>${t.confirmTitle}</h3><p>${t.confirmText}</p><div class="modal-actions"><button class="btn" id="confirmBack">${t.back}</button><button class="btn primary" id="confirmYes">${t.confirm}</button></div></div></div>`);document.querySelector('#confirmBack').onclick=()=>document.querySelector('#confirmModal').remove();document.querySelector('#confirmYes').onclick=()=>{document.querySelector('#confirmModal').remove();submitPublicRegistration();}}
 function renderSuccess(){const t=i18n[currentLang];const s=lastSubmission;if(!s){app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><h2>${t.success}</h2></div></section></div>`;return}const rows=(s.summary||[]).map(x=>`<div class="item"><b>${esc(x.label)}</b>${esc(Array.isArray(x.value)?x.value.join('、'):(x.value&&typeof x.value==='object'?Object.entries(x.value).map(([k,v])=>k+': '+v).join(' / '):x.value||''))}</div>`).join('');app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('check_circle')}</div><h2>${t.success}</h2><p>${esc(s.eventName||activityConfig.name)}</p><div class="success-code">${esc(s.registrationNumber)}</div><div class="tiny muted">${t.code}</div><div class="summary"><h3>${t.summary}</h3>${rows}</div>${successNote?`<div class="paragraph-block">${esc(successNote)}</div>`:''}<div class="screenshot-tip"><b>${t.save}</b><br>${t.saveText}</div></div></section></div>`;langOptSelected(renderSuccess);}
-function renderStatus(type){const t=i18n[currentLang];let title='',desc='',icon='info';if(type==='notstarted'){title=t.notStarted;desc='2026/12/01 20:00 KST (UTC+9)';icon='schedule'}if(type==='full'){title=t.full;desc='本次報名名額已全數額滿。';icon='check_circle'}if(type==='closed'){title=t.closed;desc='感謝您的關注，本活動目前已停止接受報名。';icon='horizontal_rule'}if(type==='paused'){title=t.paused;desc='本活動暫時停止接受新的報名，請稍後再重新查看。';icon='pause'}const rerender=()=>renderStatus(type);app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi(icon)}</div><h2>${title}</h2><p>${desc}</p><div style="height:24px"></div><div class="paragraph-block"></div></div></section></div>${protoNav()}`;bind();langOptSelected(rerender);}
 
-function bindTopMenus(){
- const pBtn=document.querySelector('#profileBtn'),pMenu=document.querySelector('#profileMenu'),lBtn=document.querySelector('#adminLangBtn'),lMenu=document.querySelector('#adminLangMenu');
- const close=()=>document.querySelectorAll('.dropdown-menu.open').forEach(m=>m.classList.remove('open'));
- if(pBtn)pBtn.onclick=e=>{e.stopPropagation();const will=!pMenu.classList.contains('open');close();pMenu.classList.toggle('open',will)};
- if(lBtn)lBtn.onclick=e=>{e.stopPropagation();const will=!lMenu.classList.contains('open');close();lMenu.classList.toggle('open',will)};
- document.addEventListener('click',e=>{if(!e.target.closest('.menu-wrap'))close()});
- document.querySelector('#myAccountBtn')?.addEventListener('click',showMyAccount);
- document.querySelector('#adminManageBtn')?.addEventListener('click',showAdminManage);
- document.querySelectorAll('[data-admin-lang]').forEach(b=>b.onclick=()=>{adminUiLang=b.dataset.adminLang;close();const btn=document.querySelector('#adminLangBtn');if(btn)btn.innerHTML=`${adminLangName()} ${mi('arrow_drop_down')}`;document.querySelectorAll('[data-admin-lang]').forEach(x=>x.classList.toggle('active',x.dataset.adminLang===adminUiLang));toast('後台介面語系已選擇：'+adminLangName()+'')});
+function formatKstDateTimeDisplay(v){
+  if(!v)return '';
+  const d=new Date(v);
+  if(Number.isNaN(d.getTime()))return String(v);
+  const parts=new Intl.DateTimeFormat('en-CA',{
+    timeZone:'Asia/Seoul',
+    year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',hour12:false
+  }).formatToParts(d);
+  const get=t=>parts.find(x=>x.type===t)?.value||'';
+  return `${get('year')}/${get('month')}/${get('day')} ${get('hour')}:${get('minute')}`;
+}
+function renderStatus(type){
+  const t=i18n[currentLang]||i18n.zh;
+  const map={
+    notstarted:{
+      icon:'schedule',
+      title:t.notStartedTitle||'報名尚未開始',
+      desc:`將於 ${formatKstDateTimeDisplay(kstLocalToIso(activityConfig.start))} KST (UTC+9) 開放報名`
+    },
+    full:{
+      icon:'group_off',
+      title:t.fullTitle||'報名已額滿',
+      desc:t.fullDesc||'目前名額已額滿。'
+    },
+    closed:{
+      icon:'event_busy',
+      title:t.closedTitle||'報名已截止',
+      desc:activityConfig.end ? `報名已於 ${formatKstDateTimeDisplay(kstLocalToIso(activityConfig.end))} KST (UTC+9) 截止` : (t.closedDesc||'報名已截止。')
+    },
+    paused:{
+      icon:'pause_circle',
+      title:t.pausedTitle||'目前暫停報名',
+      desc:t.pausedDesc||'請稍後再試。'
+    }
+  };
+  const s=map[type]||map.closed;
+  app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi(s.icon)}</div><h2>${esc(s.title)}</h2><p class="muted">${esc(s.desc)}</p></div></section></div>`;
+  langOptSelected(()=>renderStatus(type));
 }
 function showMyAccount(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="accountModal"><div class="modal"><div class="modal-title-row"><h3>我的帳號</h3><button class="btn icon" id="accountClose">${mi('close')}</button></div><div class="data-pair"><b>帳號</b>Jiin</div><div class="data-pair"><b>權限</b>Owner</div><div class="field"><label>目前密碼</label><input type="password" placeholder="輸入目前密碼"></div><div class="field"><label>新密碼</label><input type="password" placeholder="輸入新密碼"></div><div class="field"><label>再次輸入新密碼</label><input type="password" placeholder="再次輸入新密碼"></div><div class="modal-actions"><button class="btn primary" id="changePassword">修改密碼</button></div></div></div>`);const close=()=>document.querySelector('#accountModal')?.remove();document.querySelector('#accountClose').onclick=close;document.querySelector('#changePassword').onclick=()=>{close();toast('密碼修改流程示意（正式版接 Firebase Auth）')};}
 function showAdminManage(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="adminModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>管理員管理</h3><p>只有 Owner 可以看到此功能。</p></div><button class="btn icon" id="adminClose">${mi('close')}</button></div><div class="admin-user-card"><div><b>Jiin</b><div class="tiny muted">Owner · 目前登入帳號</div></div><span class="badge open">Owner</span></div><div class="admin-user-card"><div><b>ESON</b><div class="tiny muted">Admin · 可修改自己的密碼</div></div><button class="btn" id="resetEsonPassword">${mi('lock_reset')}重置 ESON 密碼</button></div></div></div>`);const close=()=>document.querySelector('#adminModal')?.remove();document.querySelector('#adminClose').onclick=close;document.querySelector('#resetEsonPassword').onclick=()=>{close();showResetPassword()};}

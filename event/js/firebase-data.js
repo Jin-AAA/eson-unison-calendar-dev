@@ -76,11 +76,14 @@
   }
 
   function computeState(e) {
-    if (!e || e.status === 'draft') return 'draft';
+    if (!e) return 'draft';
+    if (e.status === 'draft') return 'draft';
     if (e.paused) return 'paused';
+
     const now = new Date();
     const open = parseKstDate(e.openTime);
     const close = parseKstDate(e.closeTime);
+
     if (open && now < open) return 'notstarted';
     if (close && now >= close) return 'closed';
     if (Number(e.totalCapacity) > 0 && Number(e.acceptedCount) >= Number(e.totalCapacity)) return 'full';
