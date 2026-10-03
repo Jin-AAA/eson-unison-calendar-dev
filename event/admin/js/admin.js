@@ -485,9 +485,67 @@ function responseQuestionLabel(key){
   }
   return String(key)==='email' ? 'Email' : String(key);
 }
+
+function answerBlocksInFormOrder(){
+  return (editorBlocks||[]).filter(b=>
+    ['email','short','long','radio','checkbox','select','grid','date','time'].includes(b.type)
+  );
+}
+
+function orderedAnswerEntries(response){
+  const answers=response?.answers||{};
+  const blocks=answerBlocksInFormOrder();
+  const seen=new Set();
+  const ordered=[];
+
+  for(const block of blocks){
+    const key=String(block.id);
+    seen.add(key);
+    ordered.push({
+      key,
+      label:responseQuestionLabel(key),
+      value:Object.prototype.hasOwnProperty.call(answers,key) ? answers[key] : ''
+    });
+  }
+
+  // Safe fallback for legacy/unknown fields not present in current Form Builder.
+  for(const [key,value] of Object.entries(answers)){
+    if(seen.has(String(key))) continue;
+    ordered.push({
+      key:String(key),
+      label:responseQuestionLabel(key),
+      value
+    });
+  }
+  return ordered;
+}
+
+function firstResponseAnswer(response){
+  const answers=response?.answers||{};
+  const firstBlock=answerBlocksInFormOrder().find(b=>b.type!=='email');
+  if(!firstBlock) return '—';
+  const value=answers[firstBlock.id];
+  const display=prettyAnswer(value);
+  return display || '—';
+}
 function prettyAnswer(v){if(Array.isArray(v))return v.join('、');if(v&&typeof v==='object')return Object.entries(v).map(([k,x])=>`${k}: ${x}`).join(' / ');return v==null?'':String(v)}
 function filteredResponses(){const q=String(typeof responseSearchText==='undefined'?'':responseSearchText).trim().toLowerCase();return liveResponses.filter(r=>{const a=Object.values(r.answers||{}).map(prettyAnswer).join(' ');const hay=[r.registrationNumber,r.email,a,r.adminNote].join(' ').toLowerCase();return(!q||hay.includes(q))&&(responsePaymentFilter==='all'||r.paymentStatus===responsePaymentFilter)&&(responseStatusFilter==='all'||r.registrationStatus===responseStatusFilter)})}
-function responseRowsHtmlLive(){const rows=filteredResponses();if(!rows.length)return `<tr><td colspan="7"><div class="empty-state">${mi('inbox')}<b>目前沒有符合條件的報名資料</b></div></td></tr>`;return rows.map(r=>{const entries=Object.entries(r.answers||{}).filter(([k])=>k!=='email');const display=entries[0]?prettyAnswer(entries[0][1]):'—';return `<tr data-response-row="${r.responseId}" tabindex="0" role="button" style="cursor:pointer"><td><b>${esc(r.registrationNumber)}</b></td><td>${esc(display)}</td><td>${esc(r.email)}</td><td>${esc(r.submittedAt)}</td><td><span class="badge ${r.paymentStatus==='已確認'?'open':r.paymentStatus==='已退款'?'closed':'upcoming'}">${esc(r.paymentStatus)}</span></td><td>${esc(r.registrationStatus)}</td><td>${esc(r.adminNote||'—')}</td></tr>`}).join('')}
+function responseRowsHtmlLive(){
+  const rows=filteredResponses();
+  if(!rows.length)return `<tr><td colspan="7"><div class="empty-state">${mi('inbox')}<b>目前沒有符合條件的報名資料</b></div></td></tr>`;
+  return rows.map(r=>{
+    const display=firstResponseAnswer(r);
+    return `<tr data-response-row="${r.responseId}" tabindex="0" role="button" style="cursor:pointer">
+      <td><b>${esc(r.registrationNumber)}</b></td>
+      <td>${esc(r.email)}</td>
+      <td>${esc(display)}</td>
+      <td>${esc(r.submittedAt)}</td>
+      <td><span class="badge ${r.paymentStatus==='已確認'?'open':r.paymentStatus==='已退款'?'closed':'upcoming'}">${esc(r.paymentStatus)}</span></td>
+      <td>${esc(r.registrationStatus)}</td>
+      <td>${esc(r.adminNote||'—')}</td>
+    </tr>`;
+  }).join('');
+}
 async function loadResponsesLive(){const body=document.querySelector('#responseRows');if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('progress_activity')}<b>正在讀取資料...</b></div></td></tr>`;try{const d=(await apiGet('getResponses',{eventId:currentEventId})).data;liveResponses=d.items||[];editorBlocks=d.blocks||editorBlocks||[];document.querySelector('#responseEventTitle').textContent=d.event?.name||'報名資料';document.querySelector('#statCapacity').textContent=`${d.stats.acceptedCount} / ${d.stats.totalCapacity}`;document.querySelector('#statPaid').textContent=d.stats.paidConfirmed;document.querySelector('#statUnpaid').textContent=d.stats.unpaid;refreshResponseRowsLive()}catch(err){if(body)body.innerHTML=`<tr><td colspan="7"><div class="empty-state">${mi('error')}<b>讀取失敗</b><span>${esc(err.message)}</span></div></td></tr>`}}
 function refreshResponseRowsLive(){
   const body=document.querySelector('#responseRows');
@@ -510,13 +568,16 @@ function resetResponseSearchState(){
   responseSearchText='';
   try{ if('responseSearch' in window && typeof window.responseSearch!=='string'){} }catch(e){}
 }
-function renderResponses(){if(!currentEventId){navigate('dashboard');return}app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><button class="btn small" data-nav="dashboard">${mi('arrow_back')} 活動列表</button><h1 id="responseEventTitle" style="margin-top:18px">報名資料</h1><div class="muted">報名資料管理 · KST</div></div><div class="actions"><button class="btn" id="openResponsePublicBtn">${mi('open_in_new')} 開啟表單頁面</button><button class="btn" id="editPublishedFormBtn">編輯表單</button></div></div><div class="response-top compact"><div class="card metric"><div class="muted small">目前名額</div><div class="num" id="statCapacity">—</div><div class="tiny muted">目前報名 / 設定總名額</div></div><div class="card metric"><div class="muted small">已確認入金</div><div class="num" id="statPaid">—</div></div><div class="card metric"><div class="muted small">尚未入金</div><div class="num" id="statUnpaid">—</div></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="responseSearch" placeholder="搜尋 Email、姓名或回答內容"></div><div class="filter-row"><select id="paymentFilter"><option value="all">全部入金狀態</option><option>未確認</option><option>已確認</option><option>已退款</option></select><select id="statusFilter"><option value="all">全部報名狀態</option><option>有效</option><option>取消</option><option>作廢</option></select></div></div><div class="card table-card"><table class="table"><thead><tr><th>編號</th><th>姓名 / 第一回答</th><th>Email</th><th>報名時間（KST）</th><th>入金</th><th>狀態</th><th>備註</th></tr></thead><tbody id="responseRows"></tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#responseSearch').oninput=e=>{responseSearchText=e.target.value;refreshResponseRowsLive()};document.querySelector('#paymentFilter').onchange=e=>{responsePaymentFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#statusFilter').onchange=e=>{responseStatusFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#editPublishedFormBtn').onclick=()=>loadEventForEditor(currentEventId);document.querySelector('#openResponsePublicBtn').onclick=()=>{const ev=demoEvents.find(x=>x.id===currentEventId);if(ev?.slug)window.open(PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(ev.slug),'_blank')};loadResponsesLive()}
+function renderResponses(){if(!currentEventId){navigate('dashboard');return}app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><button class="btn small" data-nav="dashboard">${mi('arrow_back')} 活動列表</button><h1 id="responseEventTitle" style="margin-top:18px">報名資料</h1><div class="muted">報名資料管理 · KST</div></div><div class="actions"><button class="btn" id="openResponsePublicBtn">${mi('open_in_new')} 開啟表單頁面</button><button class="btn" id="editPublishedFormBtn">編輯表單</button></div></div><div class="response-top compact"><div class="card metric"><div class="muted small">目前名額</div><div class="num" id="statCapacity">—</div><div class="tiny muted">目前報名 / 設定總名額</div></div><div class="card metric"><div class="muted small">已確認入金</div><div class="num" id="statPaid">—</div></div><div class="card metric"><div class="muted small">尚未入金</div><div class="num" id="statUnpaid">—</div></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="responseSearch" placeholder="搜尋 Email、姓名或回答內容"></div><div class="filter-row"><select id="paymentFilter"><option value="all">全部入金狀態</option><option>未確認</option><option>已確認</option><option>已退款</option></select><select id="statusFilter"><option value="all">全部報名狀態</option><option>有效</option><option>取消</option><option>作廢</option></select></div></div><div class="card table-card"><table class="table"><thead><tr><th>編號</th><th>Email</th><th>第一回答</th><th>報名時間（KST）</th><th>入金</th><th>狀態</th><th>備註</th></tr></thead><tbody id="responseRows"></tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#responseSearch').oninput=e=>{responseSearchText=e.target.value;refreshResponseRowsLive()};document.querySelector('#paymentFilter').onchange=e=>{responsePaymentFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#statusFilter').onchange=e=>{responseStatusFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#editPublishedFormBtn').onclick=()=>loadEventForEditor(currentEventId);document.querySelector('#openResponsePublicBtn').onclick=()=>{const ev=demoEvents.find(x=>x.id===currentEventId);if(ev?.slug)window.open(PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(ev.slug),'_blank')};loadResponsesLive()}
 function openResponseDrawerLive(responseId){
   const r=liveResponses.find(x=>String(x.responseId)===String(responseId));
   if(!r){
     console.warn('找不到報名資料',responseId);
     return;
-  }const answers=Object.entries(r.answers||{}).map(([k,v])=>`<div class="data-pair"><b>${esc(responseQuestionLabel(k))}</b><span>${esc(prettyAnswer(v))}</span></div>`).join('');document.body.insertAdjacentHTML('beforeend',`<div class="drawer-backdrop" id="drawerBg"></div><aside class="drawer" id="drawer"><div class="drawer-head"><div><b style="font-size:20px">${esc(r.registrationNumber)} · ${esc(r.email)}</b><div class="tiny muted">${esc(r.submittedAt)} KST</div></div><button class="btn icon close" id="drawerClose">${mi('close')}</button></div><div class="section-label">報名者提交資料</div>${answers}<div class="section-label">管理資料</div><div class="field"><label>入金狀態</label><select id="drawerPayment"><option ${r.paymentStatus==='未確認'?'selected':''}>未確認</option><option ${r.paymentStatus==='已確認'?'selected':''}>已確認</option><option ${r.paymentStatus==='已退款'?'selected':''}>已退款</option></select></div><div class="field"><label>報名狀態</label><select id="drawerStatus"><option ${r.registrationStatus==='有效'?'selected':''}>有效</option><option ${r.registrationStatus==='取消'?'selected':''}>取消</option><option ${r.registrationStatus==='作廢'?'selected':''}>作廢</option></select></div><div class="field"><label>管理員備註</label><textarea class="notearea" id="drawerNote">${esc(r.adminNote||'')}</textarea></div><button class="btn primary" style="width:100%;margin-top:12px" id="drawerSave">儲存變更</button><button class="btn danger" style="width:100%;margin-top:16px" id="reuseEmailBtn" ${r.allowEmailReuse?'disabled':''}>${r.allowEmailReuse?'已允許此 Email 再次報名':'允許此 Email 再次報名'}</button></aside>`);const close=()=>{document.querySelector('#drawerBg')?.remove();document.querySelector('#drawer')?.remove()};document.querySelector('#drawerClose').onclick=close;document.querySelector('#drawerBg').onclick=close;document.querySelector('#drawerSave').onclick=async()=>{
+  }
+  const answers=orderedAnswerEntries(r).map(item=>
+    `<div class="data-pair"><b>${esc(item.label)}</b><span>${esc(prettyAnswer(item.value))}</span></div>`
+  ).join('');document.body.insertAdjacentHTML('beforeend',`<div class="drawer-backdrop" id="drawerBg"></div><aside class="drawer" id="drawer"><div class="drawer-head"><div><b style="font-size:20px">${esc(r.registrationNumber)} · ${esc(r.email)}</b><div class="tiny muted">${esc(r.submittedAt)} KST</div></div><button class="btn icon close" id="drawerClose">${mi('close')}</button></div><div class="section-label">報名者提交資料</div>${answers}<div class="section-label">管理資料</div><div class="field"><label>入金狀態</label><select id="drawerPayment"><option ${r.paymentStatus==='未確認'?'selected':''}>未確認</option><option ${r.paymentStatus==='已確認'?'selected':''}>已確認</option><option ${r.paymentStatus==='已退款'?'selected':''}>已退款</option></select></div><div class="field"><label>報名狀態</label><select id="drawerStatus"><option ${r.registrationStatus==='有效'?'selected':''}>有效</option><option ${r.registrationStatus==='取消'?'selected':''}>取消</option><option ${r.registrationStatus==='作廢'?'selected':''}>作廢</option></select></div><div class="field"><label>管理員備註</label><textarea class="notearea" id="drawerNote">${esc(r.adminNote||'')}</textarea></div><button class="btn primary" style="width:100%;margin-top:12px" id="drawerSave">儲存變更</button><button class="btn danger" style="width:100%;margin-top:16px" id="reuseEmailBtn" ${r.allowEmailReuse?'disabled':''}>${r.allowEmailReuse?'已允許此 Email 再次報名':'允許此 Email 再次報名'}</button></aside>`);const close=()=>{document.querySelector('#drawerBg')?.remove();document.querySelector('#drawer')?.remove()};document.querySelector('#drawerClose').onclick=close;document.querySelector('#drawerBg').onclick=close;document.querySelector('#drawerSave').onclick=async()=>{
       const btn=document.querySelector('#drawerSave');
       try{
         btn.disabled=true;
