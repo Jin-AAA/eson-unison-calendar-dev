@@ -347,6 +347,69 @@ function renderLogin(){
 function bindLoginLang(){const btn=document.querySelector('#loginLangBtn'),menu=document.querySelector('#loginLangMenu');if(!btn||!menu)return;btn.onclick=e=>{e.stopPropagation();menu.classList.toggle('open')};document.querySelectorAll('[data-login-lang]').forEach(x=>x.onclick=()=>{adminUiLang=x.dataset.loginLang;renderLogin()});document.addEventListener('click',()=>menu.classList.remove('open'),{once:true});}
 function dashboardRows(){const q=(dashboardQuery||'').trim().toLowerCase();return demoEvents.filter(e=>{const statusPass=dashboardFilter==='all'||(dashboardFilter==='open'&&e.status==='open')||(dashboardFilter==='upcoming'&&e.status==='upcoming')||(dashboardFilter==='ended'&&['closed','full'].includes(e.status))||(dashboardFilter==='draft'&&e.status==='draft');const haystack=(e.name+' '+(e.slug||'')+' /event/'+(e.slug||'')).toLowerCase();const queryPass=!q||haystack.includes(q);return statusPass&&queryPass})}
 function dashboardTableHtml(){const rows=dashboardRows(); if(!rows.length)return `<tr><td colspan="6"><div class="empty-state">${mi('search_off')}<b>找不到符合條件的活動</b><span>請調整搜尋關鍵字或篩選條件。</span></div></td></tr>`;return rows.map(e=>{const publicCell=e.status==='draft'?`<span class="unpublished-label">${mi('hide_source')} 尚未發布</span>`:`<button class="btn small" data-open-public="${e.id}" title="開啟 https://eson1228.com/event/${e.slug}/">${mi('open_in_new')} 開啟前台</button>`;return `<tr><td><b>${e.name}</b><div class="tiny muted" style="margin-top:4px">${e.status==='draft'?'尚未產生公開網址':'/event/'+e.slug+'/'}</div></td><td><span class="badge ${e.status}">${e.label}</span></td><td>${e.range}</td><td><b>${e.count} / ${e.cap}</b><div class="progress"><i style="width:${Math.min(100,e.count/e.cap*100)}%"></i></div></td><td>${publicCell}</td><td><div class="row-actions"><button class="btn small" data-edit-event="${e.id}">編輯</button>${e.status==='draft'?'':`<button class="btn small" data-view-responses="${e.id}">查看資料</button>`}${['full','closed'].includes(e.status)?'<button class="btn small soft" data-capacity="'+e.id+'">再次開放增收</button>':''}</div></td></tr>`}).join('')}
+
+function bindTopMenus(){
+  const profileBtn=document.querySelector('#profileBtn');
+  const profileMenu=document.querySelector('#profileMenu');
+  const langBtn=document.querySelector('#adminLangBtn');
+  const langMenu=document.querySelector('#adminLangMenu');
+
+  const closeMenus=()=>{
+    document.querySelectorAll('.dropdown-menu.open').forEach(menu=>menu.classList.remove('open'));
+  };
+
+  if(profileBtn && profileMenu){
+    profileBtn.onclick=e=>{
+      e.stopPropagation();
+      const shouldOpen=!profileMenu.classList.contains('open');
+      closeMenus();
+      profileMenu.classList.toggle('open',shouldOpen);
+    };
+  }
+
+  if(langBtn && langMenu){
+    langBtn.onclick=e=>{
+      e.stopPropagation();
+      const shouldOpen=!langMenu.classList.contains('open');
+      closeMenus();
+      langMenu.classList.toggle('open',shouldOpen);
+    };
+  }
+
+  document.querySelectorAll('[data-admin-lang]').forEach(btn=>{
+    btn.onclick=e=>{
+      e.stopPropagation();
+      adminUiLang=btn.dataset.adminLang;
+      closeMenus();
+
+      const currentLangBtn=document.querySelector('#adminLangBtn');
+      if(currentLangBtn){
+        currentLangBtn.innerHTML=`${adminLangName()} ${mi('arrow_drop_down')}`;
+      }
+
+      document.querySelectorAll('[data-admin-lang]').forEach(item=>{
+        item.classList.toggle('active',item.dataset.adminLang===adminUiLang);
+      });
+
+      toast('後台介面語系已切換');
+    };
+  });
+
+  document.querySelector('#myAccountBtn')?.addEventListener('click',()=>{
+    closeMenus();
+    showMyAccount();
+  });
+
+  document.querySelector('#adminManageBtn')?.addEventListener('click',()=>{
+    closeMenus();
+    showAdminManage();
+  });
+
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('.menu-wrap')) closeMenus();
+  },{once:true});
+}
+
 function renderDashboard(){app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><h1>活動管理</h1><div class="muted">所有時間皆以 KST（UTC+9）顯示</div></div><div class="actions"><button class="btn primary" data-nav="editor">${mi('add')}新增活動</button></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="dashboardSearch" placeholder="搜尋活動名稱或網址" value="${dashboardQuery.replaceAll('"','&quot;')}" /></div><div class="seg" id="dashboardFilters"><button data-filter="all" class="${dashboardFilter==='all'?'active':''}">全部</button><button data-filter="open" class="${dashboardFilter==='open'?'active':''}">開放中</button><button data-filter="upcoming" class="${dashboardFilter==='upcoming'?'active':''}">未開始</button><button data-filter="ended" class="${dashboardFilter==='ended'?'active':''}">已結束</button><button data-filter="draft" class="${dashboardFilter==='draft'?'active':''}">草稿</button></div></div><div class="card table-card"><table class="table"><thead><tr><th>活動名稱</th><th>狀態</th><th>報名期間（KST）</th><th>報名</th><th>前台頁面</th><th>操作</th></tr></thead><tbody id="eventRows">${dashboardTableHtml()}</tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#dashboardSearch').addEventListener('input',e=>{dashboardQuery=e.target.value;refreshDashboardRows()});document.querySelectorAll('#dashboardFilters [data-filter]').forEach(b=>b.onclick=()=>{dashboardFilter=b.dataset.filter;document.querySelectorAll('#dashboardFilters button').forEach(x=>x.classList.toggle('active',x===b));refreshDashboardRows()});bindCapacityButtons();bindDashboardEditors();bindPublicButtons();loadDashboardFromApi();}
 function refreshDashboardRows(){document.querySelector('#eventRows').innerHTML=dashboardTableHtml();bind();bindCapacityButtons();bindDashboardEditors();bindPublicButtons();}
 function bindCapacityButtons(){document.querySelectorAll('[data-capacity]').forEach(b=>b.onclick=()=>showCapacityModal(b.dataset.capacity));}
