@@ -445,6 +445,9 @@ function showDeleteEventModal(eventId){
         <div class="field" style="margin-top:18px">
           <label>請輸入活動名稱「${esc(ev.name)}」以確認刪除</label>
           <input id="deleteEventNameConfirm" autocomplete="off">
+          <div id="deleteEventNameError" class="field-error" style="display:none;margin-top:8px">
+            活動名稱不一致，請輸入完整活動名稱「${esc(ev.name)}」
+          </div>
         </div>
 
         <div class="modal-actions">
@@ -461,9 +464,23 @@ function showDeleteEventModal(eventId){
 
   const input=document.querySelector('#deleteEventNameConfirm');
   const confirmBtn=document.querySelector('#deleteEventConfirm');
+  const errorText=document.querySelector('#deleteEventNameError');
 
   input.oninput=()=>{
-    confirmBtn.disabled=input.value.trim()!==ev.name;
+    const value=input.value.trim();
+    const isMatch=value===ev.name;
+    confirmBtn.disabled=!isMatch;
+
+    const shouldShowError=value.length>0&&!isMatch;
+    errorText.style.display=shouldShowError?'block':'none';
+    input.classList.toggle('is-error',shouldShowError);
+  };
+
+  input.onblur=()=>{
+    const value=input.value.trim();
+    const shouldShowError=value.length>0&&value!==ev.name;
+    errorText.style.display=shouldShowError?'block':'none';
+    input.classList.toggle('is-error',shouldShowError);
   };
 
   confirmBtn.onclick=async()=>{
