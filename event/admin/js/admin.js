@@ -346,7 +346,7 @@ function renderLogin(){
 }
 function bindLoginLang(){const btn=document.querySelector('#loginLangBtn'),menu=document.querySelector('#loginLangMenu');if(!btn||!menu)return;btn.onclick=e=>{e.stopPropagation();menu.classList.toggle('open')};document.querySelectorAll('[data-login-lang]').forEach(x=>x.onclick=()=>{adminUiLang=x.dataset.loginLang;renderLogin()});document.addEventListener('click',()=>menu.classList.remove('open'),{once:true});}
 function dashboardRows(){const q=(dashboardQuery||'').trim().toLowerCase();return demoEvents.filter(e=>{const statusPass=dashboardFilter==='all'||(dashboardFilter==='open'&&e.status==='open')||(dashboardFilter==='upcoming'&&e.status==='upcoming')||(dashboardFilter==='ended'&&['closed','full'].includes(e.status))||(dashboardFilter==='draft'&&e.status==='draft');const haystack=(e.name+' '+(e.slug||'')+' /event/'+(e.slug||'')).toLowerCase();const queryPass=!q||haystack.includes(q);return statusPass&&queryPass})}
-function dashboardTableHtml(){const rows=dashboardRows(); if(!rows.length)return `<tr><td colspan="6"><div class="empty-state">${mi('search_off')}<b>找不到符合條件的活動</b><span>請調整搜尋關鍵字或篩選條件。</span></div></td></tr>`;return rows.map(e=>{const publicCell=e.status==='draft'?`<span class="unpublished-label">${mi('hide_source')} 尚未發布</span>`:`<button class="btn small" data-open-public="${e.id}" title="開啟 https://eson1228.com/event/${e.slug}/">${mi('open_in_new')} 開啟前台</button>`;return `<tr><td><b>${e.name}</b><div class="tiny muted" style="margin-top:4px">${e.status==='draft'?'尚未產生公開網址':'/event/'+e.slug+'/'}</div></td><td><span class="badge ${e.status}">${e.label}</span></td><td>${e.range}</td><td><b>${e.count} / ${e.cap}</b><div class="progress"><i style="width:${Math.min(100,e.count/e.cap*100)}%"></i></div></td><td>${publicCell}</td><td><div class="row-actions"><button class="btn small" data-edit-event="${e.id}">編輯</button>${e.status==='draft'?'':`<button class="btn small" data-view-responses="${e.id}">查看資料</button>`}${['full','closed'].includes(e.status)?'<button class="btn small soft" data-capacity="'+e.id+'">再次開放增收</button>':''}</div></td></tr>`}).join('')}
+function dashboardTableHtml(){const rows=dashboardRows(); if(!rows.length)return `<tr><td colspan="6"><div class="empty-state">${mi('search_off')}<b>找不到符合條件的活動</b><span>請調整搜尋關鍵字或篩選條件。</span></div></td></tr>`;return rows.map(e=>{const publicCell=e.status==='draft'?`<span class="unpublished-label">${mi('hide_source')} 尚未發布</span>`:`<button class="btn small" data-open-public="${e.id}" title="開啟 https://eson1228.com/event/${e.slug}/">${mi('open_in_new')} 開啟前台</button>`;return `<tr><td><b>${e.name}</b><div class="tiny muted" style="margin-top:4px">${e.status==='draft'?'尚未產生公開網址':'/event/'+e.slug+'/'}</div></td><td><span class="badge ${e.status}">${e.label}</span></td><td>${e.range}</td><td><b>${e.count} / ${e.cap}</b><div class="progress"><i style="width:${Math.min(100,e.count/e.cap*100)}%"></i></div></td><td>${publicCell}</td><td><div class="row-actions"><button class="btn small" data-edit-event="${e.id}">編輯</button>${e.status==='draft'?'':`<button class="btn small" data-view-responses="${e.id}">查看資料</button>`}${['full','closed'].includes(e.status)?'<button class="btn small soft" data-capacity="'+e.id+'">再次開放增收</button>':''}<button class="btn small danger" data-delete-event="${e.id}">刪除</button></div></td></tr>`}).join('')}
 
 function bindTopMenus(){
   const profileBtn=document.querySelector('#profileBtn');
@@ -417,8 +417,75 @@ function bindPublicButtons(){document.querySelectorAll('[data-open-public]').for
 function bindDashboardEditors(){
   document.querySelectorAll('[data-edit-event]').forEach(b=>b.onclick=()=>loadEventForEditor(b.dataset.editEvent));
   document.querySelectorAll('[data-view-responses]').forEach(b=>b.onclick=()=>{currentEventId=b.dataset.viewResponses;navigate('responses')});
+  document.querySelectorAll('[data-delete-event]').forEach(b=>b.onclick=()=>showDeleteEventModal(b.dataset.deleteEvent));
   const add=document.querySelector('[data-nav="editor"]');
   if(add&&add.closest('.page-head'))add.onclick=()=>{resetNewEventEditor();navigate('editor')};
+}
+
+
+function showDeleteEventModal(eventId){
+  const ev=demoEvents.find(x=>String(x.id)===String(eventId));
+  if(!ev)return;
+
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="modal-backdrop" id="deleteEventModal">
+      <div class="modal">
+        <div class="modal-title-row">
+          <div>
+            <h3>確認刪除活動？</h3>
+            <p>此操作無法復原。</p>
+          </div>
+          <button class="btn icon" id="deleteEventClose">${mi('close')}</button>
+        </div>
+
+        <div class="reuse-confirm-note" style="margin-top:12px">
+          刪除後將一併移除活動設定、前台頁面、所有報名資料與 Email 重複報名鎖定資料。
+        </div>
+
+        <div class="field" style="margin-top:18px">
+          <label>請輸入活動名稱「${esc(ev.name)}」以確認刪除</label>
+          <input id="deleteEventNameConfirm" autocomplete="off">
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn" id="deleteEventCancel">取消</button>
+          <button class="btn danger" id="deleteEventConfirm" disabled>永久刪除</button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  const close=()=>document.querySelector('#deleteEventModal')?.remove();
+  document.querySelector('#deleteEventClose').onclick=close;
+  document.querySelector('#deleteEventCancel').onclick=close;
+
+  const input=document.querySelector('#deleteEventNameConfirm');
+  const confirmBtn=document.querySelector('#deleteEventConfirm');
+
+  input.oninput=()=>{
+    confirmBtn.disabled=input.value.trim()!==ev.name;
+  };
+
+  confirmBtn.onclick=async()=>{
+    try{
+      confirmBtn.disabled=true;
+      confirmBtn.textContent='刪除中...';
+      showSavingNotice('正在刪除活動…');
+
+      await apiPost('deleteEvent',{eventId:ev.id});
+
+      hideSavingNotice();
+      close();
+      sessionStorage.removeItem('eson_event_dashboard_cache_v2');
+      toast('活動已刪除');
+      await loadDashboardFromApi();
+    }catch(err){
+      hideSavingNotice();
+      confirmBtn.disabled=false;
+      confirmBtn.textContent='永久刪除';
+      alert('刪除失敗：'+err.message);
+    }
+  };
 }
 
 function esc(v=''){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -796,7 +863,19 @@ async function submitPublicRegistration(){
   const btn=document.querySelector('#submitBtn');
   if(btn){btn.disabled=true;btn.textContent='送出中...'}
   try{
-    lastSubmission=await apiPost('submitRegistration',{slug:currentPublicSlug||activityConfig.slug,answers});
+    const result=await apiPost('submitRegistration',{slug:currentPublicSlug||activityConfig.slug,answers});
+    const summary=(editorBlocks||[])
+      .filter(b=>['email','short','long','radio','checkbox','select','grid','date','time'].includes(b.type))
+      .map(b=>({
+        label:b.title||b.type,
+        value:Object.prototype.hasOwnProperty.call(answers,b.id)?answers[b.id]:''
+      }));
+
+    lastSubmission={
+      ...result,
+      eventName:activityConfig.name,
+      summary
+    };
     renderSuccess();
   }catch(err){
     const map={NOT_STARTED:'報名尚未開始。',PAUSED:'目前暫停接受報名。',CLOSED:'報名已截止。',FULL:'名額已額滿。',DUPLICATE_EMAIL:'這個 Email 已經有報名紀錄。若你剛剛才送出，可能其實已經報名成功。'};

@@ -272,7 +272,12 @@
         }
 
         const initialCapacity = Number(data.initialCapacity) || Number(old?.initialCapacity) || 0;
-        if (initialCapacity < 1) throw new Error('初始名額至少需要 1 人');
+        if (initialCapacity < 1) throw new Error('總名額至少需要 1 人');
+
+        const acceptedCount = Number(old?.acceptedCount) || 0;
+        if (old && initialCapacity < acceptedCount) {
+          throw new Error(`總名額不可小於目前已報名人數（${acceptedCount} 人）`);
+        }
 
         const eventId = ref.id;
         const doc = {
@@ -282,6 +287,7 @@
           openTime:data.openTime || '',
           closeTime:data.closeTime || '',
           initialCapacity,
+          totalCapacity:initialCapacity,
           paused:!!data.paused,
           showInEventList:data.showInEventList !== false,
           showRegistrationCount:data.showRegistrationCount !== false,
@@ -342,6 +348,9 @@
 
       case 'increaseCapacity':
         return call('increaseCapacity', payload);
+
+      case 'deleteEvent':
+        return call('deleteEvent', payload);
 
       default:
         throw new Error('未知寫入 action：' + action);
