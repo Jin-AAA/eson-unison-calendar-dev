@@ -29,7 +29,7 @@ let adminContextUid='';
 let editorLastSavedAt='';
 let publicLanguageReady=false;
 
-const LANG_NAMES={ko:'한국어',en:'English',zh:'中文',ja:'日本語'};
+const LANG_NAMES={ko:'한국어',en:'English',zh:'中文'};
 
 function defaultAdminLanguage(profile){
   const name=String(profile?.name||'').trim().toLowerCase();
@@ -81,6 +81,92 @@ async function refreshEditorLastSaved(){
     const label={zh:'最後儲存：',ko:'마지막 저장: ',en:'Last Saved: ',ja:'最終保存：'}[adminUiLang]||'Last Saved: ';
     el.textContent=label+formatEditorSavedAt(editorLastSavedAt);
   }
+}
+
+
+const ADMIN_UI_TEXT={
+  ko:{
+    '活動管理':'이벤트 관리','所有時間皆以 KST（UTC+9）顯示':'모든 시간은 KST (UTC+9) 기준입니다',
+    '新增活動':'이벤트 추가','搜尋活動名稱或網址':'이벤트명 또는 URL 검색',
+    '全部':'전체','開放中':'접수 중','未開始':'시작 전','已結束':'종료','草稿':'초안',
+    '活動名稱':'이벤트명','狀態':'상태','報名期間（KST）':'신청 기간 (KST)','報名':'신청',
+    '前台頁面':'공개 페이지','操作':'작업','開啟前台':'공개 페이지 열기','編輯':'편집',
+    '查看資料':'신청 데이터','再次開放增收':'재오픈 / 인원 추가','刪除':'삭제',
+    '預覽表單':'폼 미리보기','儲存編輯':'변경 저장','儲存草稿':'초안 저장','發布':'게시',
+    '編輯頁面':'페이지 편집','報名表單':'신청 폼','報名成功頁':'신청 완료 페이지',
+    '手機版預覽來源':'모바일 미리보기','元件設定':'컴포넌트 설정',
+    '活動基本設定':'이벤트 기본 설정','專屬網址':'전용 URL',
+    '表單開放時間（KST）':'신청 시작 시간 (KST)','表單關閉時間（KST）':'신청 마감 시간 (KST)',
+    '初始名額':'정원','前台活動列表':'공개 이벤트 목록','顯示':'표시','不顯示':'숨김',
+    '顯示目前報名人數':'현재 신청 인원 표시','取消':'취소','儲存設定':'설정 저장',
+    '報名資料':'신청 데이터','報名資料管理 · KST':'신청 데이터 관리 · KST',
+    '活動列表':'이벤트 목록','開啟表單頁面':'신청 페이지 열기','編輯表單':'폼 편집',
+    '目前名額':'현재 정원','目前報名 / 設定總名額':'현재 신청 / 총 정원',
+    '已確認入金':'입금 확인','尚未入金':'미입금','搜尋 Email、姓名或回答內容':'이메일, 이름 또는 답변 검색',
+    '全部入金狀態':'전체 입금 상태','未確認':'미확인','已確認':'확인','已退款':'환불',
+    '全部報名狀態':'전체 신청 상태','有效':'유효','取消':'취소','作廢':'무효',
+    '編號':'번호','第一回答':'첫 번째 답변','報名時間（KST）':'신청 시간 (KST)',
+    '入金':'입금','備註':'메모','報名者提交資料':'신청자 제출 내용','管理資料':'관리 정보',
+    '入金狀態':'입금 상태','報名狀態':'신청 상태','管理員備註':'관리자 메모','儲存變更':'변경 저장',
+    '找不到符合條件的活動':'조건에 맞는 이벤트가 없습니다',
+    '請調整搜尋關鍵字或篩選條件。':'검색어 또는 필터를 조정해 주세요.'
+  },
+  en:{
+    '活動管理':'Event Management','所有時間皆以 KST（UTC+9）顯示':'All times are shown in KST (UTC+9)',
+    '新增活動':'New Event','搜尋活動名稱或網址':'Search event name or URL',
+    '全部':'All','開放中':'Open','未開始':'Not Started','已結束':'Ended','草稿':'Draft',
+    '活動名稱':'Event Name','狀態':'Status','報名期間（KST）':'Registration Period (KST)','報名':'Registrations',
+    '前台頁面':'Public Page','操作':'Actions','開啟前台':'Open Public Page','編輯':'Edit',
+    '查看資料':'View Responses','再次開放增收':'Reopen / Add Capacity','刪除':'Delete',
+    '預覽表單':'Preview Form','儲存編輯':'Save Changes','儲存草稿':'Save Draft','發布':'Publish',
+    '編輯頁面':'Edit Pages','報名表單':'Registration Form','報名成功頁':'Success Page',
+    '手機版預覽來源':'Mobile Preview','元件設定':'Component Settings',
+    '活動基本設定':'Event Settings','專屬網址':'Event URL',
+    '表單開放時間（KST）':'Form Opens (KST)','表單關閉時間（KST）':'Form Closes (KST)',
+    '初始名額':'Capacity','前台活動列表':'Public Event List','顯示':'Show','不顯示':'Hide',
+    '顯示目前報名人數':'Show Current Registration Count','取消':'Cancel','儲存設定':'Save Settings',
+    '報名資料':'Responses','報名資料管理 · KST':'Registration Management · KST',
+    '活動列表':'Event List','開啟表單頁面':'Open Form Page','編輯表單':'Edit Form',
+    '目前名額':'Capacity','目前報名 / 設定總名額':'Registered / Total Capacity',
+    '已確認入金':'Payment Confirmed','尚未入金':'Payment Pending','搜尋 Email、姓名或回答內容':'Search email, name, or response',
+    '全部入金狀態':'All Payment Statuses','未確認':'Unconfirmed','已確認':'Confirmed','已退款':'Refunded',
+    '全部報名狀態':'All Registration Statuses','有效':'Valid','取消':'Cancelled','作廢':'Void',
+    '編號':'No.','第一回答':'First Answer','報名時間（KST）':'Submitted At (KST)',
+    '入金':'Payment','備註':'Note','報名者提交資料':'Submitted Information','管理資料':'Admin Data',
+    '入金狀態':'Payment Status','報名狀態':'Registration Status','管理員備註':'Admin Note','儲存變更':'Save Changes',
+    '找不到符合條件的活動':'No matching events found',
+    '請調整搜尋關鍵字或篩選條件。':'Adjust your search or filters.'
+  }
+};
+
+function translateAdminUI(root=document.body){
+  if(!IS_ADMIN_PATH || adminUiLang==='zh' || !root)return;
+  const map=ADMIN_UI_TEXT[adminUiLang]||{};
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  const nodes=[];
+  while(walker.nextNode())nodes.push(walker.currentNode);
+  for(const node of nodes){
+    const raw=node.nodeValue||'';
+    const trimmed=raw.trim();
+    if(!trimmed)continue;
+    if(map[trimmed]){
+      node.nodeValue=raw.replace(trimmed,map[trimmed]);
+      continue;
+    }
+    for(const [zh,tr] of Object.entries(map)){
+      if(raw.includes(zh)){
+        node.nodeValue=raw.replaceAll(zh,tr);
+      }
+    }
+  }
+  root.querySelectorAll?.('[placeholder]').forEach(el=>{
+    const p=el.getAttribute('placeholder');
+    if(map[p])el.setAttribute('placeholder',map[p]);
+  });
+  root.querySelectorAll?.('option').forEach(el=>{
+    const t=(el.textContent||'').trim();
+    if(map[t])el.textContent=map[t];
+  });
 }
 
 const PUBLIC_SYS={
@@ -329,6 +415,7 @@ async function loadEventForEditor(eventId){
     }
     selectedBlockId=editorBlocks[0]?.id||'email';
     successNote=detail.pages?.success?.note||'';
+    setDocumentTitle(activityConfig.name||'ESON Events');
     editorPage='form';
     navigate('editor');
   }catch(err){
@@ -422,7 +509,7 @@ function topbar(){
   const name=esc(currentAdminName());
   const role=currentAdminRole();
   const canManage=currentAdminProfile?.role==='owner';
-  return `<div class="topbar"><div class="brand"><div class="brandmark">E</div><span>${ADMIN_TITLE}</span></div><div class="top-actions"><div class="timezone-label">${mi('schedule')} KST (UTC+9)</div><div class="menu-wrap"><button class="btn profile-btn lang-btn" id="adminLangBtn">${adminLangName()} ${mi('arrow_drop_down')}</button><div class="dropdown-menu lang-menu" id="adminLangMenu"><button class="menu-item ${adminUiLang==='ko'?'active':''}" data-admin-lang="ko">한국어</button><button class="menu-item ${adminUiLang==='en'?'active':''}" data-admin-lang="en">English</button><button class="menu-item ${adminUiLang==='zh'?'active':''}" data-admin-lang="zh">中文</button><button class="menu-item ${adminUiLang==='ja'?'active':''}" data-admin-lang="ja">日本語</button></div></div><div class="menu-wrap"><button class="btn profile-btn" id="profileBtn">${name} ${mi('arrow_drop_down')}</button><div class="dropdown-menu profile-menu" id="profileMenu"><div class="menu-title">${name} · ${role}</div><button class="menu-item" id="myAccountBtn">${mi('person')} ${adminUiLang==='ko'?'내 계정':adminUiLang==='en'?'My Account':adminUiLang==='ja'?'マイアカウント':'我的帳號'}</button>${canManage?`<button class="menu-item" id="adminManageBtn">${mi('manage_accounts')} ${adminUiLang==='ko'?'관리자 관리':adminUiLang==='en'?'Admin Management':adminUiLang==='ja'?'管理者管理':'管理員管理'}</button>`:''}<div class="menu-sep"></div><button class="menu-item" data-nav="login">${mi('logout')} ${adminUiLang==='ko'?'로그아웃':adminUiLang==='en'?'Sign Out':adminUiLang==='ja'?'ログアウト':'登出'}</button></div></div></div></div>`;
+  return `<div class="topbar"><div class="brand"><div class="brandmark">E</div><span>${ADMIN_TITLE}</span></div><div class="top-actions"><div class="timezone-label">${mi('schedule')} KST (UTC+9)</div><div class="menu-wrap"><button class="btn profile-btn lang-btn" id="adminLangBtn">${adminLangName()} ${mi('arrow_drop_down')}</button><div class="dropdown-menu lang-menu" id="adminLangMenu"><button class="menu-item ${adminUiLang==='ko'?'active':''}" data-admin-lang="ko">한국어</button><button class="menu-item ${adminUiLang==='en'?'active':''}" data-admin-lang="en">English</button><button class="menu-item ${adminUiLang==='zh'?'active':''}" data-admin-lang="zh">中文</button></div></div><div class="menu-wrap"><button class="btn profile-btn" id="profileBtn">${name} ${mi('arrow_drop_down')}</button><div class="dropdown-menu profile-menu" id="profileMenu"><div class="menu-title">${name} · ${role}</div><button class="menu-item" id="myAccountBtn">${mi('person')} ${adminUiLang==='ko'?'내 계정':adminUiLang==='en'?'My Account':adminUiLang==='ja'?'マイアカウント':'我的帳號'}</button>${canManage?`<button class="menu-item" id="adminManageBtn">${mi('manage_accounts')} ${adminUiLang==='ko'?'관리자 관리':adminUiLang==='en'?'Admin Management':adminUiLang==='ja'?'管理者管理':'管理員管理'}</button>`:''}<div class="menu-sep"></div><button class="menu-item" data-nav="login">${mi('logout')} ${adminUiLang==='ko'?'로그아웃':adminUiLang==='en'?'Sign Out':adminUiLang==='ja'?'ログアウト':'登出'}</button></div></div></div></div>`;
 }
 
 function loginStrings(){return {
@@ -431,7 +518,7 @@ function loginStrings(){return {
  en:{title:'Admin Login',desc:'Sign in to manage events and registration data.',account:'Account',password:'Password',login:'Sign in',note:'Sign in with Firebase Authentication. Owner and Admin permissions are managed by the system.'},
  ja:{title:'管理者ログイン',desc:'ログイン後、イベントと申込データを管理できます。',account:'アカウント',password:'パスワード',login:'ログイン',note:'Firebase Authenticationでログインし、OwnerとAdminの権限を管理します。'}
 }[adminUiLang]||this.zh}
-function loginLangMenu(){return `<div class="login-lang-wrap menu-wrap"><button class="btn profile-btn lang-btn" id="loginLangBtn">${adminLangName()} ${mi('arrow_drop_down')}</button><div class="dropdown-menu lang-menu" id="loginLangMenu"><button class="menu-item ${adminUiLang==='ko'?'active':''}" data-login-lang="ko">한국어</button><button class="menu-item ${adminUiLang==='en'?'active':''}" data-login-lang="en">English</button><button class="menu-item ${adminUiLang==='zh'?'active':''}" data-login-lang="zh">中文</button><button class="menu-item ${adminUiLang==='ja'?'active':''}" data-login-lang="ja">日本語</button></div></div>`}
+function loginLangMenu(){return `<div class="login-lang-wrap menu-wrap"><button class="btn profile-btn lang-btn" id="loginLangBtn">${adminLangName()} ${mi('arrow_drop_down')}</button><div class="dropdown-menu lang-menu" id="loginLangMenu"><button class="menu-item ${adminUiLang==='ko'?'active':''}" data-login-lang="ko">한국어</button><button class="menu-item ${adminUiLang==='en'?'active':''}" data-login-lang="en">English</button><button class="menu-item ${adminUiLang==='zh'?'active':''}" data-login-lang="zh">中文</button></div></div>`}
 function renderLogin(){
   const t=loginStrings();
   app.innerHTML=`<div class="login-wrap"><section class="login-panel">${loginLangMenu()}<div class="login-box"><div class="brand login-brand"><span>${ADMIN_TITLE}</span></div><h2>${t.title}</h2><p class="muted">${t.desc}</p><div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label>${t.password}</label><input id="loginPassword" type="password" autocomplete="current-password"></div><button class="btn primary" id="loginSubmitBtn" style="width:100%;margin-top:7px">${t.login}</button><div class="login-note">Firebase Authentication</div></div></section></div>${protoNav()}`;
@@ -496,6 +583,7 @@ function bindTopMenus(){
       if(uid)localStorage.setItem('eson_admin_lang_'+uid,adminUiLang);
       closeMenus();
       renderRoute();
+      setTimeout(()=>translateAdminUI(document.body),0);
     };
   });
 
@@ -900,6 +988,7 @@ function openResponseDrawerLive(responseId){
     };const reuse=document.querySelector('#reuseEmailBtn');if(reuse&&!r.allowEmailReuse)reuse.onclick=()=>{document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="reuseModal"><div class="modal"><h3>允許此 Email 再次報名？</h3><div class="reuse-confirm-note">原本的報名紀錄仍會保留，也不會自動釋放名額。</div><div class="modal-actions"><button class="btn" id="reuseCancel">取消</button><button class="btn danger" id="reuseConfirm">確認允許</button></div></div></div>`);const cm=()=>document.querySelector('#reuseModal')?.remove();document.querySelector('#reuseCancel').onclick=cm;document.querySelector('#reuseConfirm').onclick=async()=>{try{await apiPost('allowEmailReuse',{eventId:currentEventId,responseId:r.responseId});cm();close();toast('此 Email 已可再次報名');loadResponsesLive()}catch(err){alert('操作失敗：'+err.message)}}}}
 
 async function renderPublicHome(){
+  setDocumentTitle('ESON Events');
   app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="public-content"><div class="event-title">ESON Events</div><div class="event-desc">${P('home')}</div><div id="publicEventList"><div class="muted">${P('loading')}</div></div></div></section></div>`;
   langOptSelected(renderPublicHome);
   try{
@@ -915,7 +1004,7 @@ async function renderPublicHome(){
 
 async function loadPublicEventBySlug(slug){
   currentPublicSlug=slug;
-  app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('progress_activity')}</div><h2>正在讀取資料...</h2><p class="muted">請稍候</p></div></section></div>`;
+  app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('progress_activity')}</div><h2>${P('loading')}</h2><p class="muted">${P('wait')}</p></div></section></div>`;
   try{
     const data=await apiGet('getPublicEvent',{slug});
     const detail=data&&data.event;
@@ -1039,9 +1128,9 @@ function publicBlockHtml(b){
  if(b.type==='spacer')return `<div style="height:${b.height==='small'?16:b.height==='large'?54:30}px"></div>`;
  return '';
 }
-function renderPublic(){const t=i18n[currentLang];app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="public-content"><div class="event-title">${esc(activityConfig.name)}</div><div class="info-box"><b>${t.open}</b><br>${t.deadline}: ${activityConfig.end.replace('T',' ')} KST (UTC+9)</div>${editorBlocks.map(publicBlockHtml).join('')}<button class="public-submit" id="submitBtn">${t.submit}</button></div></section></div>${protoNav()}`;bind();langOptSelected();document.querySelector('#submitBtn').onclick=()=>previewFromEditor?toast('預覽模式不會真的送出資料'):showConfirm();}
+function renderPublic(){setDocumentTitle(activityConfig.name||'ESON Events');const t=i18n[currentLang];app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="public-content"><div class="event-title">${esc(activityConfig.name)}</div><div class="info-box"><b>${t.open}</b><br>${t.deadline}: ${activityConfig.end.replace('T',' ')} KST (UTC+9)</div>${editorBlocks.map(publicBlockHtml).join('')}<button class="public-submit" id="submitBtn">${t.submit}</button></div></section></div>${protoNav()}`;bind();langOptSelected();document.querySelector('#submitBtn').onclick=()=>previewFromEditor?toast('預覽模式不會真的送出資料'):showConfirm();}
 function showConfirm(){const t=i18n[currentLang];const answers=collectPublicAnswers();const err=validatePublicAnswers(answers);if(err){alert(err);return}document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="confirmModal"><div class="modal"><h3>${t.confirmTitle}</h3><p>${t.confirmText}</p><div class="modal-actions"><button class="btn" id="confirmBack">${t.back}</button><button class="btn primary" id="confirmYes">${t.confirm}</button></div></div></div>`);document.querySelector('#confirmBack').onclick=()=>document.querySelector('#confirmModal').remove();document.querySelector('#confirmYes').onclick=()=>{document.querySelector('#confirmModal').remove();submitPublicRegistration();}}
-function renderSuccess(){const t=i18n[currentLang];const s=lastSubmission;if(!s){app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><h2>${t.success}</h2></div></section></div>`;return}const rows=(s.summary||[]).map(x=>`<div class="item"><b>${esc(x.label)}</b>${esc(Array.isArray(x.value)?x.value.join('、'):(x.value&&typeof x.value==='object'?Object.entries(x.value).map(([k,v])=>k+': '+v).join(' / '):x.value||''))}</div>`).join('');app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('check_circle')}</div><h2>${t.success}</h2><p>${esc(s.eventName||activityConfig.name)}</p><div class="success-code">${esc(s.registrationNumber)}</div><div class="tiny muted">${t.code}</div><div class="summary"><h3>${t.summary}</h3>${rows}</div>${successNote?`<div class="paragraph-block">${esc(successNote)}</div>`:''}<div class="screenshot-tip"><b>${t.save}</b><br>${t.saveText}</div></div></section></div>`;langOptSelected(renderSuccess);}
+function renderSuccess(){setDocumentTitle(activityConfig.name||lastSubmission?.eventName||'ESON Events');const t=i18n[currentLang];const s=lastSubmission;if(!s){app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><h2>${t.success}</h2></div></section></div>`;return}const rows=(s.summary||[]).map(x=>`<div class="item"><b>${esc(x.label)}</b>${esc(Array.isArray(x.value)?x.value.join('、'):(x.value&&typeof x.value==='object'?Object.entries(x.value).map(([k,v])=>k+': '+v).join(' / '):x.value||''))}</div>`).join('');app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('check_circle')}</div><h2>${t.success}</h2><p>${esc(s.eventName||activityConfig.name)}</p><div class="success-code">${esc(s.registrationNumber)}</div><div class="tiny muted">${t.code}</div><div class="summary"><h3>${t.summary}</h3>${rows}</div>${successNote?`<div class="paragraph-block">${esc(successNote)}</div>`:''}<div class="screenshot-tip"><b>${t.save}</b><br>${t.saveText}</div></div></section></div>`;langOptSelected(renderSuccess);}
 
 function formatKstDateTimeDisplay(v){
   if(!v)return '';
@@ -1056,6 +1145,7 @@ function formatKstDateTimeDisplay(v){
   return `${get('year')}/${get('month')}/${get('day')} ${get('hour')}:${get('minute')}`;
 }
 function renderStatus(type){
+  setDocumentTitle(activityConfig.name||'ESON Events');
   const t=i18n[currentLang]||i18n.en;
   const openTime=formatKstDateTimeDisplay(kstLocalToIso(activityConfig.start));
   const closeTime=formatKstDateTimeDisplay(kstLocalToIso(activityConfig.end));
@@ -1081,6 +1171,7 @@ function hideSavingNotice(){document.querySelector('.saving-notice')?.remove();}
 function toast(text){document.querySelector('.toast')?.remove();document.body.insertAdjacentHTML('beforeend',`<div class="toast">${mi('check_circle')} ${text}</div>`);setTimeout(()=>document.querySelector('.toast')?.remove(),2200)}
 
 function bind(){
+  setTimeout(()=>translateAdminUI(document.body),0);
   const sel=document.querySelector('#protoSelect');
   if(sel){
     const route=location.hash.replace('#','')||'login';
@@ -1097,15 +1188,18 @@ function bind(){
   });
 }
 function navigate(route){previewFromEditor=false;location.hash=route;renderRoute()}
+function setDocumentTitle(title){document.title=title||'ESON Events';}
+
 async function renderRoute(){
   const publicSlug=new URLSearchParams(location.search).get('event');
   if(!IS_ADMIN_PATH){
     await initPublicLanguage();
-    if(publicSlug)loadPublicEventBySlug(publicSlug);
-    else renderPublicHome();
+    if(publicSlug)await loadPublicEventBySlug(publicSlug);
+    else await renderPublicHome();
     return;
   }
 
+  setDocumentTitle('Eson Event Admin Dashboard');
   await window.EsonFirebase.ready();
   const r=location.hash.replace('#','')||'login';
   const user=window.EsonFirebase.currentUser();
