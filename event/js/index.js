@@ -1,13 +1,7 @@
-window.ESON_EVENT_CONFIG={
-  environment:'dev',
-  apiUrl:'https://script.google.com/macros/s/AKfycby5Y2iMZPeqT82TLlQk04qrA6AEFjXyCv0K-1A-OGaRemgkL5qGK04cv_Li3mx_u5SQ/exec'
-};
-
 const mi=(name)=>`<span class="material-symbols-outlined" aria-hidden="true">${name}</span>`;
 const app=document.querySelector('#app');
 let currentLang='en';
 let previewFromEditor=false;
-const API_URL='https://script.google.com/macros/s/AKfycby5Y2iMZPeqT82TLlQk04qrA6AEFjXyCv0K-1A-OGaRemgkL5qGK04cv_Li3mx_u5SQ/exec';
 const IS_ADMIN_PATH=/\/admin\/?$/.test(location.pathname);
 const PUBLIC_EVENT_BASE=location.pathname.replace(/\/admin\/?$/,'/');
 let currentEventId=null;
@@ -43,7 +37,7 @@ async function ensureAdminContext(){
   if(!currentAdminProfile||adminContextUid!==user.uid){
     currentAdminProfile=await window.EsonFirebase.getProfile();
     adminContextUid=user.uid;
-    adminUiLang=localStorage.getItem('eson_admin_lang_'+user.uid)||defaultAdminLanguage(currentAdminProfile);
+    adminUiLang=localStorage.getItem('eson_admin_lang_'+user.uid)||localStorage.getItem('eson_login_lang')||defaultAdminLanguage(currentAdminProfile);
   }
   return currentAdminProfile;
 }
@@ -86,88 +80,607 @@ async function refreshEditorLastSaved(){
 
 const ADMIN_UI_TEXT={
   ko:{
-    '活動管理':'이벤트 관리','所有時間皆以 KST（UTC+9）顯示':'모든 시간은 KST (UTC+9) 기준입니다',
-    '新增活動':'이벤트 추가','搜尋活動名稱或網址':'이벤트명 또는 URL 검색',
-    '全部':'전체','開放中':'접수 중','未開始':'시작 전','已結束':'종료','草稿':'초안',
-    '活動名稱':'이벤트명','狀態':'상태','報名期間（KST）':'신청 기간 (KST)','報名':'신청',
-    '前台頁面':'공개 페이지','操作':'작업','開啟前台':'공개 페이지 열기','編輯':'편집',
-    '查看資料':'신청 데이터','再次開放增收':'재오픈 / 인원 추가','刪除':'삭제',
-    '預覽表單':'폼 미리보기','儲存編輯':'변경 저장','儲存草稿':'초안 저장','發布':'게시',
-    '編輯頁面':'페이지 편집','報名表單':'신청 폼','報名成功頁':'신청 완료 페이지',
-    '手機版預覽來源':'모바일 미리보기','元件設定':'컴포넌트 설정',
-    '活動基本設定':'이벤트 기본 설정','專屬網址':'전용 URL',
-    '表單開放時間（KST）':'신청 시작 시간 (KST)','表單關閉時間（KST）':'신청 마감 시간 (KST)',
-    '初始名額':'정원','前台活動列表':'공개 이벤트 목록','顯示':'표시','不顯示':'숨김',
-    '顯示目前報名人數':'현재 신청 인원 표시','取消':'취소','儲存設定':'설정 저장',
-    '報名資料':'신청 데이터','報名資料管理 · KST':'신청 데이터 관리 · KST',
-    '活動列表':'이벤트 목록','開啟表單頁面':'신청 페이지 열기','編輯表單':'폼 편집',
-    '目前名額':'현재 정원','目前報名 / 設定總名額':'현재 신청 / 총 정원',
-    '已確認入金':'입금 확인','尚未入金':'미입금','搜尋 Email、姓名或回答內容':'이메일, 이름 또는 답변 검색',
-    '全部入金狀態':'전체 입금 상태','未確認':'미확인','已確認':'확인','已退款':'환불',
-    '全部報名狀態':'전체 신청 상태','有效':'유효','取消':'취소','作廢':'무효',
-    '編號':'번호','第一回答':'첫 번째 답변','報名時間（KST）':'신청 시간 (KST)',
-    '入金':'입금','備註':'메모','報名者提交資料':'신청자 제출 내용','管理資料':'관리 정보',
-    '入金狀態':'입금 상태','報名狀態':'신청 상태','管理員備註':'관리자 메모','儲存變更':'변경 저장',
-    '找不到符合條件的活動':'조건에 맞는 이벤트가 없습니다',
-    '請調整搜尋關鍵字或篩選條件。':'검색어 또는 필터를 조정해 주세요.'
+    "活動管理":"이벤트 관리",
+    "所有時間皆以 KST（UTC+9）顯示":"모든 시간은 KST (UTC+9) 기준입니다",
+    "新增活動":"이벤트 추가",
+    "搜尋活動名稱或網址":"이벤트명 또는 URL 검색",
+    "全部":"전체",
+    "開放中":"접수 중",
+    "未開始":"시작 전",
+    "已結束":"종료",
+    "草稿":"초안",
+    "活動名稱":"이벤트명",
+    "狀態":"상태",
+    "報名期間（KST）":"신청 기간 (KST)",
+    "報名":"신청",
+    "前台頁面":"공개 페이지",
+    "操作":"작업",
+    "開啟前台":"공개 페이지 열기",
+    "編輯":"편집",
+    "查看資料":"신청 데이터",
+    "再次開放增收":"재오픈 / 인원 추가",
+    "刪除":"삭제",
+    "預覽表單":"폼 미리보기",
+    "儲存編輯":"변경 저장",
+    "儲存草稿":"초안 저장",
+    "發布":"게시",
+    "編輯頁面":"페이지 편집",
+    "報名表單":"신청 폼",
+    "報名成功頁":"신청 완료 페이지",
+    "手機版預覽來源":"모바일 미리보기",
+    "元件設定":"컴포넌트 설정",
+    "活動基本設定":"이벤트 기본 설정",
+    "專屬網址":"전용 URL",
+    "表單開放時間（KST）":"신청 시작 시간 (KST)",
+    "表單關閉時間（KST）":"신청 마감 시간 (KST)",
+    "初始名額":"정원",
+    "前台活動列表":"공개 이벤트 목록",
+    "顯示":"표시",
+    "不顯示":"숨김",
+    "顯示目前報名人數":"현재 신청 인원 표시",
+    "取消":"취소",
+    "儲存設定":"설정 저장",
+    "報名資料":"신청 데이터",
+    "報名資料管理 · KST":"신청 데이터 관리 · KST",
+    "活動列表":"이벤트 목록",
+    "開啟表單頁面":"신청 페이지 열기",
+    "編輯表單":"폼 편집",
+    "目前名額":"현재 정원",
+    "目前報名 / 設定總名額":"현재 신청 / 총 정원",
+    "已確認入金":"입금 확인",
+    "尚未入金":"미입금",
+    "搜尋 Email、姓名或回答內容":"이메일, 이름 또는 답변 검색",
+    "全部入金狀態":"전체 입금 상태",
+    "未確認":"미확인",
+    "已確認":"확인",
+    "已退款":"환불",
+    "全部報名狀態":"전체 신청 상태",
+    "有效":"유효",
+    "作廢":"무효",
+    "編號":"번호",
+    "第一回答":"첫 번째 답변",
+    "報名時間（KST）":"신청 시간 (KST)",
+    "入金":"입금",
+    "備註":"메모",
+    "報名者提交資料":"신청자 제출 내용",
+    "管理資料":"관리 정보",
+    "入金狀態":"입금 상태",
+    "報名狀態":"신청 상태",
+    "管理員備註":"관리자 메모",
+    "儲存變更":"변경 저장",
+    "找不到符合條件的活動":"조건에 맞는 이벤트가 없습니다",
+    "請調整搜尋關鍵字或篩選條件。":"검색어 또는 필터를 조정해 주세요.",
+    "尚未設定":"설정 안 됨",
+    "尚未開放":"오픈 전",
+    "已額滿":"마감",
+    "已截止":"접수 종료",
+    "暫停":"일시 중지",
+    "正在讀取資料...":"데이터를 불러오는 중...",
+    "請稍候":"잠시만 기다려 주세요",
+    "無法讀取資料":"데이터를 불러올 수 없습니다",
+    "系統固定欄位・每個 Email 僅能報名一次":"시스템 고정 항목 · 이메일 1개당 1회만 신청 가능",
+    "讀取活動失敗：":"이벤트 불러오기 실패: ",
+    "儲存失敗：":"저장 실패: ",
+    "發布失敗：":"게시 실패: ",
+    "刪除失敗：":"삭제 실패: ",
+    "登入失敗：":"로그인 실패: ",
+    "再次開放失敗：":"재오픈 실패: ",
+    "操作失敗：":"작업 실패: ",
+    "修改失敗：":"변경 실패: ",
+    "寄送失敗：":"전송 실패: ",
+    "活動基本資料已儲存":"이벤트 기본 정보가 저장되었습니다",
+    "儲存中...":"저장 중...",
+    "草稿已儲存":"초안이 저장되었습니다",
+    "發布中...":"게시 중...",
+    "活動已發布":"이벤트가 게시되었습니다",
+    "編輯內容已儲存":"변경 내용이 저장되었습니다",
+    "我的帳號":"내 계정",
+    "管理員管理":"관리자 관리",
+    "登出":"로그아웃",
+    "登入中...":"로그인 중...",
+    "尚未發布":"미게시",
+    "尚未產生公開網址":"공개 URL이 아직 없습니다",
+    "確認刪除活動？":"이벤트를 삭제하시겠습니까?",
+    "此操作無法復原。":"이 작업은 되돌릴 수 없습니다.",
+    "刪除後將一併移除活動設定、前台頁面、所有報名資料與 Email 重複報名鎖定資料。":"삭제하면 이벤트 설정, 공개 페이지, 모든 신청 데이터와 이메일 중복 신청 잠금 데이터가 함께 삭제됩니다.",
+    "永久刪除":"영구 삭제",
+    "刪除中...":"삭제 중...",
+    "正在刪除活動…":"이벤트를 삭제하는 중…",
+    "活動已刪除":"이벤트가 삭제되었습니다",
+    "Email 為固定第一欄，無法移動":"이메일은 첫 번째 고정 항목이라 이동할 수 없습니다",
+    "拖曳調整順序":"드래그하여 순서 변경",
+    "拖曳排序":"드래그 정렬",
+    "大標題":"큰 제목",
+    "小標題":"작은 제목",
+    "簡答":"단답형",
+    "詳答":"장문형",
+    "單選":"단일 선택",
+    "複選":"복수 선택",
+    "下拉選單":"드롭다운",
+    "單選表格":"선택 표",
+    "日期":"날짜",
+    "時間":"시간",
+    "內文":"본문",
+    "圖片":"이미지",
+    "圖片區塊":"이미지 블록",
+    "分隔線":"구분선",
+    "留白":"여백",
+    "其他：[________]":"기타: [________]",
+    "刪除區塊":"블록 삭제",
+    "刪除選項":"옵션 삭제",
+    "新增列":"행 추가",
+    "新增欄":"열 추가",
+    "新增選項":"옵션 추가",
+    "請選擇一個元件。":"컴포넌트를 선택해 주세요.",
+    "系統 Email 欄位":"시스템 이메일 항목",
+    "簡答設定":"단답형 설정",
+    "詳答設定":"장문형 설정",
+    "單選設定":"단일 선택 설정",
+    "複選設定":"복수 선택 설정",
+    "下拉選單設定":"드롭다운 설정",
+    "單選表格設定":"선택 표 설정",
+    "日期設定":"날짜 설정",
+    "時間設定":"시간 설정",
+    "大標題設定":"큰 제목 설정",
+    "小標題設定":"작은 제목 설정",
+    "內文設定":"본문 설정",
+    "圖片設定":"이미지 설정",
+    "留白設定":"여백 설정",
+    "選填":"선택 사항",
+    "顯示名稱":"표시 이름",
+    "說明文字":"설명 문구",
+    "必填":"필수",
+    "此設定無法更改":"이 설정은 변경할 수 없습니다",
+    "重複報名判定":"중복 신청 판정",
+    "系統固定用途":"시스템 고정 용도",
+    "題目":"질문",
+    "輸入框初始高度":"입력창 기본 높이",
+    "小":"작게",
+    "中":"보통",
+    "大":"크게",
+    "加入「其他」":"\"기타\" 추가",
+    "每一列都必須回答":"모든 행에 답해야 합니다",
+    "文字":"텍스트",
+    "對齊":"정렬",
+    "靠左":"왼쪽",
+    "置中":"가운데",
+    "內容":"내용",
+    "選擇圖片":"이미지 선택",
+    "替代文字":"대체 텍스트",
+    "尺寸":"크기",
+    "滿寬":"전체 너비",
+    "圖片會壓縮後直接存放在表單資料中，請避免使用過大的圖片。":"이미지는 압축되어 폼 데이터에 직접 저장됩니다. 너무 큰 이미지는 사용하지 마세요.",
+    "此元件沒有額外設定。":"이 컴포넌트에는 추가 설정이 없습니다.",
+    "高度":"높이",
+    "報名成功！":"신청이 완료되었습니다!",
+    "您的報名資料已成功送出。":"신청 정보가 제출되었습니다.",
+    "報名編號":"신청 번호",
+    "本次填寫內容":"제출한 내용",
+    "姓名":"이름",
+    "請截圖保存":"화면을 캡처해 보관해 주세요",
+    "本頁面關閉或重新整理後，將無法再次查看此次提交內容。":"이 페이지를 닫거나 새로고침하면 제출 내용을 다시 볼 수 없습니다.",
+    "管理員補充說明":"관리자 보충 설명",
+    "Email（固定）":"이메일 (고정)",
+    "未命名區塊":"제목 없는 블록",
+    "元件":"컴포넌트",
+    "大綱":"개요",
+    "點擊項目可快速定位到表單區塊；Email 固定第一欄，其餘項目也可以在大綱中拖曳調整順序。":"항목을 클릭하면 해당 블록으로 이동합니다. 이메일은 항상 첫 번째이며, 나머지 항목은 여기서 드래그하여 순서를 바꿀 수 있습니다.",
+    "活動資訊":"이벤트 정보",
+    "表單欄位":"폼 항목",
+    "內容元件":"콘텐츠 블록",
+    "設定活動名稱、專屬網址、開放／截止時間、初始名額與公開設定。時間皆以 KST（UTC+9）為基準。":"이벤트명, URL, 시작/마감 시간, 정원과 공개 설정을 지정합니다. 모든 시간은 KST(UTC+9) 기준입니다.",
+    "已從大綱調整區塊順序":"개요에서 블록 순서를 변경했습니다",
+    "返回活動管理":"이벤트 관리로 돌아가기",
+    "已發布":"게시됨",
+    "Email 以外的區塊皆可拖曳排序":"이메일 외의 블록은 모두 드래그로 순서를 바꿀 수 있습니다",
+    "成功頁固定資訊不可移除":"완료 페이지의 고정 정보는 삭제할 수 없습니다",
+    "請填寫以下報名資訊。活動相關說明由管理員自行編輯並保持原始語言。":"아래 신청 정보를 입력해 주세요. 이벤트 관련 설명은 관리자가 직접 작성한 원문 그대로 표시됩니다.",
+    "報名成功、報名編號、填寫摘要與截圖提示為系統固定內容。管理員只需編輯額外補充內容。":"신청 완료 문구, 신청 번호, 제출 내용 요약, 캡처 안내는 시스템 고정 내용입니다. 관리자는 추가 보충 설명만 편집하면 됩니다.",
+    "補充說明":"보충 설명",
+    "請先切換到「報名表單」再新增元件":"\"신청 폼\"으로 전환한 후 컴포넌트를 추가해 주세요",
+    "至少需要保留一個選項":"옵션을 최소 하나는 남겨 주세요",
+    "區塊已刪除":"블록이 삭제되었습니다",
+    "已新增元件，可在右側調整設定":"컴포넌트가 추가되었습니다. 오른쪽에서 설정을 조정하세요.",
+    "此處是整個活動層級的設定，和右側「元件設定」不同。":"여기는 이벤트 전체 설정이며, 오른쪽의 \"컴포넌트 설정\"과는 다릅니다.",
+    "僅限英文字母、數字與連字號（-），例如：":"영문, 숫자, 하이픈(-)만 사용할 수 있습니다. 예: ",
+    "活動基本設定已更新":"이벤트 기본 설정이 업데이트되었습니다",
+    "目前總名額為":"현재 총 정원은",
+    "人。增加名額後不會因取消、退款或作廢自動釋出名額。":"명입니다. 정원을 늘려도 취소, 환불, 무효 처리로 생긴 자리는 자동으로 풀리지 않습니다.",
+    "本次增加名額":"추가할 정원",
+    "新的關閉時間":"새 마감 시간",
+    "新的關閉時間（可選）":"새 마감 시간 (선택)",
+    "此活動已因時間截止。確認後會立即重新開放，並持續到你設定的「新的關閉時間」。":"이 이벤트는 시간이 지나 마감되었습니다. 확인하면 즉시 다시 열리며, 설정한 \"새 마감 시간\"까지 유지됩니다.",
+    "確認再次開放":"재오픈 확인",
+    "請輸入大於 0 的增加名額":"0보다 큰 추가 정원을 입력해 주세요",
+    "活動已截止，請設定新的關閉時間":"이벤트가 마감되었습니다. 새 마감 시간을 설정해 주세요.",
+    "正在儲存中...":"저장 중...",
+    "正在儲存中…":"저장 중…",
+    "再次開放設定已儲存，正在重新讀取最新資料":"재오픈 설정이 저장되었습니다. 최신 데이터를 다시 불러오는 중입니다…",
+    "目前沒有符合條件的報名資料":"조건에 맞는 신청 데이터가 없습니다",
+    "讀取失敗":"불러오기 실패",
+    "找不到報名資料":"신청 데이터를 찾을 수 없습니다",
+    "已允許此 Email 再次報名":"이 이메일은 다시 신청할 수 있습니다",
+    "允許此 Email 再次報名":"이 이메일 재신청 허용",
+    "報名資料已更新":"신청 데이터가 업데이트되었습니다",
+    "允許此 Email 再次報名？":"이 이메일의 재신청을 허용하시겠습니까?",
+    "原本的報名紀錄仍會保留，也不會自動釋放名額。":"기존 신청 기록은 유지되며 정원도 자동으로 풀리지 않습니다.",
+    "確認允許":"허용 확인",
+    "此 Email 已可再次報名":"이 이메일은 이제 다시 신청할 수 있습니다",
+    "預覽模式不會真的送出資料":"미리보기 모드에서는 실제로 제출되지 않습니다",
+    "帳號":"계정",
+    "權限":"권한",
+    "目前密碼":"현재 비밀번호",
+    "新密碼":"새 비밀번호",
+    "再次輸入新密碼":"새 비밀번호 확인",
+    "輸入目前密碼":"현재 비밀번호 입력",
+    "輸入新密碼":"새 비밀번호 입력",
+    "修改密碼":"비밀번호 변경",
+    "請填寫所有欄位":"모든 항목을 입력해 주세요",
+    "新密碼至少需要 8 個字元":"새 비밀번호는 8자 이상이어야 합니다",
+    "兩次輸入的新密碼不一致":"새 비밀번호가 일치하지 않습니다",
+    "密碼已更新":"비밀번호가 변경되었습니다",
+    "目前密碼不正確":"현재 비밀번호가 올바르지 않습니다",
+    "只有 Owner 可以看到此功能。":"Owner만 이 기능을 볼 수 있습니다.",
+    "目前登入帳號":"현재 로그인 계정",
+    "寄送密碼重設信":"비밀번호 재설정 메일 보내기",
+    "密碼重設信已寄出":"비밀번호 재설정 메일을 보냈습니다",
+    "管理員 Email":"관리자 이메일",
+    "寄送重設信":"재설정 메일 보내기",
+    "請輸入有效的 Email":"올바른 이메일을 입력해 주세요",
+    "重設信會寄到該管理員的 Email，由對方自行設定新密碼。任何人都無法查看他人的密碼。":"재설정 링크가 해당 관리자의 이메일로 전송되며, 본인이 직접 새 비밀번호를 설정합니다. 누구도 다른 사람의 비밀번호를 볼 수 없습니다.",
+    "圖片檔案過大，請改用較小的圖片。":"이미지가 너무 큽니다. 더 작은 이미지를 사용해 주세요.",
+    "圖片讀取失敗":"이미지를 읽지 못했습니다",
+    "找不到活動":"이벤트를 찾을 수 없습니다",
+    "請先登入管理員帳號":"먼저 관리자 계정으로 로그인해 주세요",
+    "缺少活動網址":"이벤트 URL이 없습니다",
+    "總名額至少需要 1 人":"총 정원은 최소 1명이어야 합니다",
+    "此帳號沒有後台管理權限":"이 계정에는 관리자 권한이 없습니다",
+    "操作失敗":"작업에 실패했습니다",
+    "關閉":"닫기",
+    "選項":"옵션",
+    "列":"행",
+    "欄":"열"
   },
   en:{
-    '活動管理':'Event Management','所有時間皆以 KST（UTC+9）顯示':'All times are shown in KST (UTC+9)',
-    '新增活動':'New Event','搜尋活動名稱或網址':'Search event name or URL',
-    '全部':'All','開放中':'Open','未開始':'Not Started','已結束':'Ended','草稿':'Draft',
-    '活動名稱':'Event Name','狀態':'Status','報名期間（KST）':'Registration Period (KST)','報名':'Registrations',
-    '前台頁面':'Public Page','操作':'Actions','開啟前台':'Open Public Page','編輯':'Edit',
-    '查看資料':'View Responses','再次開放增收':'Reopen / Add Capacity','刪除':'Delete',
-    '預覽表單':'Preview Form','儲存編輯':'Save Changes','儲存草稿':'Save Draft','發布':'Publish',
-    '編輯頁面':'Edit Pages','報名表單':'Registration Form','報名成功頁':'Success Page',
-    '手機版預覽來源':'Mobile Preview','元件設定':'Component Settings',
-    '活動基本設定':'Event Settings','專屬網址':'Event URL',
-    '表單開放時間（KST）':'Form Opens (KST)','表單關閉時間（KST）':'Form Closes (KST)',
-    '初始名額':'Capacity','前台活動列表':'Public Event List','顯示':'Show','不顯示':'Hide',
-    '顯示目前報名人數':'Show Current Registration Count','取消':'Cancel','儲存設定':'Save Settings',
-    '報名資料':'Responses','報名資料管理 · KST':'Registration Management · KST',
-    '活動列表':'Event List','開啟表單頁面':'Open Form Page','編輯表單':'Edit Form',
-    '目前名額':'Capacity','目前報名 / 設定總名額':'Registered / Total Capacity',
-    '已確認入金':'Payment Confirmed','尚未入金':'Payment Pending','搜尋 Email、姓名或回答內容':'Search email, name, or response',
-    '全部入金狀態':'All Payment Statuses','未確認':'Unconfirmed','已確認':'Confirmed','已退款':'Refunded',
-    '全部報名狀態':'All Registration Statuses','有效':'Valid','取消':'Cancelled','作廢':'Void',
-    '編號':'No.','第一回答':'First Answer','報名時間（KST）':'Submitted At (KST)',
-    '入金':'Payment','備註':'Note','報名者提交資料':'Submitted Information','管理資料':'Admin Data',
-    '入金狀態':'Payment Status','報名狀態':'Registration Status','管理員備註':'Admin Note','儲存變更':'Save Changes',
-    '找不到符合條件的活動':'No matching events found',
-    '請調整搜尋關鍵字或篩選條件。':'Adjust your search or filters.'
+    "活動管理":"Event Management",
+    "所有時間皆以 KST（UTC+9）顯示":"All times are shown in KST (UTC+9)",
+    "新增活動":"New Event",
+    "搜尋活動名稱或網址":"Search event name or URL",
+    "全部":"All",
+    "開放中":"Open",
+    "未開始":"Not Started",
+    "已結束":"Ended",
+    "草稿":"Draft",
+    "活動名稱":"Event Name",
+    "狀態":"Status",
+    "報名期間（KST）":"Registration Period (KST)",
+    "報名":"Registrations",
+    "前台頁面":"Public Page",
+    "操作":"Actions",
+    "開啟前台":"Open Public Page",
+    "編輯":"Edit",
+    "查看資料":"View Responses",
+    "再次開放增收":"Reopen / Add Capacity",
+    "刪除":"Delete",
+    "預覽表單":"Preview Form",
+    "儲存編輯":"Save Changes",
+    "儲存草稿":"Save Draft",
+    "發布":"Publish",
+    "編輯頁面":"Edit Pages",
+    "報名表單":"Registration Form",
+    "報名成功頁":"Success Page",
+    "手機版預覽來源":"Mobile Preview",
+    "元件設定":"Component Settings",
+    "活動基本設定":"Event Settings",
+    "專屬網址":"Event URL",
+    "表單開放時間（KST）":"Form Opens (KST)",
+    "表單關閉時間（KST）":"Form Closes (KST)",
+    "初始名額":"Capacity",
+    "前台活動列表":"Public Event List",
+    "顯示":"Show",
+    "不顯示":"Hide",
+    "顯示目前報名人數":"Show Current Registration Count",
+    "取消":"Cancel",
+    "儲存設定":"Save Settings",
+    "報名資料":"Responses",
+    "報名資料管理 · KST":"Registration Management · KST",
+    "活動列表":"Event List",
+    "開啟表單頁面":"Open Form Page",
+    "編輯表單":"Edit Form",
+    "目前名額":"Capacity",
+    "目前報名 / 設定總名額":"Registered / Total Capacity",
+    "已確認入金":"Payment Confirmed",
+    "尚未入金":"Payment Pending",
+    "搜尋 Email、姓名或回答內容":"Search email, name, or response",
+    "全部入金狀態":"All Payment Statuses",
+    "未確認":"Unconfirmed",
+    "已確認":"Confirmed",
+    "已退款":"Refunded",
+    "全部報名狀態":"All Registration Statuses",
+    "有效":"Valid",
+    "作廢":"Void",
+    "編號":"No.",
+    "第一回答":"First Answer",
+    "報名時間（KST）":"Submitted At (KST)",
+    "入金":"Payment",
+    "備註":"Note",
+    "報名者提交資料":"Submitted Information",
+    "管理資料":"Admin Data",
+    "入金狀態":"Payment Status",
+    "報名狀態":"Registration Status",
+    "管理員備註":"Admin Note",
+    "儲存變更":"Save Changes",
+    "找不到符合條件的活動":"No matching events found",
+    "請調整搜尋關鍵字或篩選條件。":"Adjust your search or filters.",
+    "尚未設定":"Not Set",
+    "尚未開放":"Not Open Yet",
+    "已額滿":"Full",
+    "已截止":"Closed",
+    "暫停":"Paused",
+    "正在讀取資料...":"Loading data...",
+    "請稍候":"Please wait",
+    "無法讀取資料":"Unable to load data",
+    "系統固定欄位・每個 Email 僅能報名一次":"System field · Each email can register only once",
+    "讀取活動失敗：":"Failed to load event: ",
+    "儲存失敗：":"Save failed: ",
+    "發布失敗：":"Publish failed: ",
+    "刪除失敗：":"Delete failed: ",
+    "登入失敗：":"Sign-in failed: ",
+    "再次開放失敗：":"Reopen failed: ",
+    "操作失敗：":"Action failed: ",
+    "修改失敗：":"Update failed: ",
+    "寄送失敗：":"Send failed: ",
+    "活動基本資料已儲存":"Event details saved",
+    "儲存中...":"Saving...",
+    "草稿已儲存":"Draft saved",
+    "發布中...":"Publishing...",
+    "活動已發布":"Event published",
+    "編輯內容已儲存":"Changes saved",
+    "我的帳號":"My Account",
+    "管理員管理":"Admin Management",
+    "登出":"Sign Out",
+    "登入中...":"Signing in...",
+    "尚未發布":"Not Published",
+    "尚未產生公開網址":"No public URL yet",
+    "確認刪除活動？":"Delete this event?",
+    "此操作無法復原。":"This action cannot be undone.",
+    "刪除後將一併移除活動設定、前台頁面、所有報名資料與 Email 重複報名鎖定資料。":"Deleting this event also removes its settings, public page, all registration data and duplicate-email locks.",
+    "永久刪除":"Delete Permanently",
+    "刪除中...":"Deleting...",
+    "正在刪除活動…":"Deleting event…",
+    "活動已刪除":"Event deleted",
+    "Email 為固定第一欄，無法移動":"Email is fixed as the first field and cannot be moved",
+    "拖曳調整順序":"Drag to reorder",
+    "拖曳排序":"Drag to reorder",
+    "大標題":"Heading",
+    "小標題":"Subheading",
+    "簡答":"Short Answer",
+    "詳答":"Long Answer",
+    "單選":"Single Choice",
+    "複選":"Multiple Choice",
+    "下拉選單":"Dropdown",
+    "單選表格":"Choice Grid",
+    "日期":"Date",
+    "時間":"Time",
+    "內文":"Paragraph",
+    "圖片":"Image",
+    "圖片區塊":"Image Block",
+    "分隔線":"Divider",
+    "留白":"Spacer",
+    "其他：[________]":"Other: [________]",
+    "刪除區塊":"Delete Block",
+    "刪除選項":"Delete Option",
+    "新增列":"Add Row",
+    "新增欄":"Add Column",
+    "新增選項":"Add Option",
+    "請選擇一個元件。":"Select a component.",
+    "系統 Email 欄位":"System Email Field",
+    "簡答設定":"Short Answer Settings",
+    "詳答設定":"Long Answer Settings",
+    "單選設定":"Single Choice Settings",
+    "複選設定":"Multiple Choice Settings",
+    "下拉選單設定":"Dropdown Settings",
+    "單選表格設定":"Choice Grid Settings",
+    "日期設定":"Date Settings",
+    "時間設定":"Time Settings",
+    "大標題設定":"Heading Settings",
+    "小標題設定":"Subheading Settings",
+    "內文設定":"Paragraph Settings",
+    "圖片設定":"Image Settings",
+    "留白設定":"Spacer Settings",
+    "選填":"Optional",
+    "顯示名稱":"Display Name",
+    "說明文字":"Help Text",
+    "必填":"Required",
+    "此設定無法更改":"This setting cannot be changed",
+    "重複報名判定":"Duplicate Registration Check",
+    "系統固定用途":"Fixed system use",
+    "題目":"Question",
+    "輸入框初始高度":"Initial Input Height",
+    "小":"Small",
+    "中":"Medium",
+    "大":"Large",
+    "加入「其他」":"Add \"Other\"",
+    "每一列都必須回答":"Every row must be answered",
+    "文字":"Text",
+    "對齊":"Alignment",
+    "靠左":"Left",
+    "置中":"Center",
+    "內容":"Content",
+    "選擇圖片":"Choose Image",
+    "替代文字":"Alt Text",
+    "尺寸":"Size",
+    "滿寬":"Full Width",
+    "圖片會壓縮後直接存放在表單資料中，請避免使用過大的圖片。":"Images are compressed and stored directly in the form data. Please avoid very large images.",
+    "此元件沒有額外設定。":"This component has no additional settings.",
+    "高度":"Height",
+    "報名成功！":"Registration Complete!",
+    "您的報名資料已成功送出。":"Your registration has been submitted.",
+    "報名編號":"Registration No.",
+    "本次填寫內容":"Your Submitted Information",
+    "姓名":"Name",
+    "請截圖保存":"Please take a screenshot",
+    "本頁面關閉或重新整理後，將無法再次查看此次提交內容。":"After this page is closed or refreshed, this submission can no longer be viewed.",
+    "管理員補充說明":"Admin Note",
+    "Email（固定）":"Email (fixed)",
+    "未命名區塊":"Untitled Block",
+    "元件":"Components",
+    "大綱":"Outline",
+    "點擊項目可快速定位到表單區塊；Email 固定第一欄，其餘項目也可以在大綱中拖曳調整順序。":"Click an item to jump to its block. Email is always first; other items can also be reordered by dragging here.",
+    "活動資訊":"Event Info",
+    "表單欄位":"Form Fields",
+    "內容元件":"Content Blocks",
+    "設定活動名稱、專屬網址、開放／截止時間、初始名額與公開設定。時間皆以 KST（UTC+9）為基準。":"Set the event name, URL, open/close time, capacity and visibility. All times are in KST (UTC+9).",
+    "已從大綱調整區塊順序":"Block order updated from the outline",
+    "返回活動管理":"Back to Event Management",
+    "已發布":"Published",
+    "Email 以外的區塊皆可拖曳排序":"All blocks except Email can be reordered by dragging",
+    "成功頁固定資訊不可移除":"Fixed success-page content cannot be removed",
+    "請填寫以下報名資訊。活動相關說明由管理員自行編輯並保持原始語言。":"Please fill in the registration details below. Event descriptions are written by admins and kept in their original language.",
+    "報名成功、報名編號、填寫摘要與截圖提示為系統固定內容。管理員只需編輯額外補充內容。":"The success message, registration number, summary and screenshot reminder are fixed system content. Admins only edit the additional note.",
+    "補充說明":"Additional Note",
+    "請先切換到「報名表單」再新增元件":"Switch to \"Registration Form\" before adding components",
+    "至少需要保留一個選項":"At least one option is required",
+    "區塊已刪除":"Block deleted",
+    "已新增元件，可在右側調整設定":"Component added. Adjust it in the right panel.",
+    "此處是整個活動層級的設定，和右側「元件設定」不同。":"These are event-level settings, different from the \"Component Settings\" on the right.",
+    "僅限英文字母、數字與連字號（-），例如：":"Letters, numbers and hyphens (-) only, e.g. ",
+    "活動基本設定已更新":"Event settings updated",
+    "目前總名額為":"Current total capacity is",
+    "人。增加名額後不會因取消、退款或作廢自動釋出名額。":"spots. Increasing capacity will not automatically release spots from cancellations, refunds or voided entries.",
+    "本次增加名額":"Spots to Add",
+    "新的關閉時間":"New Closing Time",
+    "新的關閉時間（可選）":"New Closing Time (optional)",
+    "此活動已因時間截止。確認後會立即重新開放，並持續到你設定的「新的關閉時間」。":"This event closed because its time ran out. Confirming reopens it immediately until the \"New Closing Time\" you set.",
+    "確認再次開放":"Confirm Reopen",
+    "請輸入大於 0 的增加名額":"Enter a number greater than 0",
+    "活動已截止，請設定新的關閉時間":"The event has closed. Please set a new closing time.",
+    "正在儲存中...":"Saving...",
+    "正在儲存中…":"Saving…",
+    "再次開放設定已儲存，正在重新讀取最新資料":"Reopen settings saved. Reloading the latest data…",
+    "目前沒有符合條件的報名資料":"No matching registrations",
+    "讀取失敗":"Failed to load",
+    "找不到報名資料":"Registration not found",
+    "已允許此 Email 再次報名":"This email is now allowed to register again",
+    "允許此 Email 再次報名":"Allow This Email to Register Again",
+    "報名資料已更新":"Registration updated",
+    "允許此 Email 再次報名？":"Allow this email to register again?",
+    "原本的報名紀錄仍會保留，也不會自動釋放名額。":"The original registration is kept and its spot is not released automatically.",
+    "確認允許":"Confirm",
+    "此 Email 已可再次報名":"This email can now register again",
+    "預覽模式不會真的送出資料":"Preview mode does not actually submit data",
+    "帳號":"Account",
+    "權限":"Role",
+    "目前密碼":"Current Password",
+    "新密碼":"New Password",
+    "再次輸入新密碼":"Confirm New Password",
+    "輸入目前密碼":"Enter current password",
+    "輸入新密碼":"Enter new password",
+    "修改密碼":"Change Password",
+    "請填寫所有欄位":"Please fill in all fields",
+    "新密碼至少需要 8 個字元":"New password must be at least 8 characters",
+    "兩次輸入的新密碼不一致":"The new passwords do not match",
+    "密碼已更新":"Password updated",
+    "目前密碼不正確":"Current password is incorrect",
+    "只有 Owner 可以看到此功能。":"Only Owners can see this feature.",
+    "目前登入帳號":"Currently signed in",
+    "寄送密碼重設信":"Send Password Reset Email",
+    "密碼重設信已寄出":"Password reset email sent",
+    "管理員 Email":"Admin Email",
+    "寄送重設信":"Send Reset Email",
+    "請輸入有效的 Email":"Enter a valid email",
+    "重設信會寄到該管理員的 Email，由對方自行設定新密碼。任何人都無法查看他人的密碼。":"A reset link is emailed to the admin, who sets a new password themselves. Nobody can view anyone's password.",
+    "圖片檔案過大，請改用較小的圖片。":"The image is too large. Please use a smaller image.",
+    "圖片讀取失敗":"Failed to read the image",
+    "找不到活動":"Event not found",
+    "請先登入管理員帳號":"Please sign in as an admin first",
+    "缺少活動網址":"Missing event URL",
+    "總名額至少需要 1 人":"Capacity must be at least 1",
+    "此帳號沒有後台管理權限":"This account has no admin access",
+    "操作失敗":"Action failed",
+    "關閉":"Close",
+    "選項":"Options",
+    "列":"Rows",
+    "欄":"Columns"
   }
 };
-
+// Words that mean something different in a status column / status dropdown than on a button.
+const ADMIN_UI_STATUS_VARIANT={en:{'取消':'Cancelled'},ko:{'取消':'취소됨'}};
+// Sentences that contain a variable part. Matched as a whole, then rebuilt in the target language.
+const ADMIN_UI_PATTERNS=[
+  {re:/^請輸入活動名稱「([\s\S]*)」以確認刪除$/,en:m=>`Type the event name "${m[1]}" to confirm deletion`,ko:m=>`확인을 위해 이벤트명 "${m[1]}"을(를) 입력해 주세요`},
+  {re:/^活動名稱不一致，請輸入完整活動名稱「([\s\S]*)」$/,en:m=>`The name does not match. Please enter the full event name "${m[1]}"`,ko:m=>`이벤트명이 일치하지 않습니다. 전체 이벤트명 "${m[1]}"을(를) 입력해 주세요`},
+  {re:/^已增加\s*(\d+)\s*個名額，總名額為\s*(\d+)$/,en:m=>`Added ${m[1]} spots. New total capacity: ${m[2]}`,ko:m=>`정원 ${m[1]}명이 추가되어 총 정원은 ${m[2]}명입니다`},
+  {re:/^總名額不可小於目前已報名人數（(\d+) 人）$/,en:m=>`Capacity cannot be lower than the current registrations (${m[1]})`,ko:m=>`총 정원은 현재 신청 인원(${m[1]}명)보다 적을 수 없습니다`},
+  {re:/^開啟 (https?:\/\/\S+)$/,en:m=>`Open ${m[1]}`,ko:m=>`${m[1]} 열기`}
+];
+// Authored content (questions, option text, answers, event names, notes) must never be translated.
+const ADMIN_TR_SKIP='script,style,textarea,input,.q-title,.heading-block,.subheading-block,.paragraph-block,.choice,.form-input,.form-textarea,.form-select,.grid-preview,.outline-label,.event-title,.editor-title,#responseEventTitle,.drawer .data-pair,#eventRows td:first-child b,#responseRows td:nth-child(2),#responseRows td:nth-child(3),#responseRows td:nth-child(7),.option-row,.admin-user-card b';
+// Attributes (placeholder/title) are UI text even on inputs and option rows, so those two selectors are dropped.
+const ADMIN_TR_SKIP_ATTR=ADMIN_TR_SKIP.replace('textarea,input,','').replace('.option-row,','');
+const ADMIN_HAN_RE=/[\u4e00-\u9fff]/;
+function adminTr(text,el){
+  if(typeof text!=='string'||!text||adminUiLang==='zh')return text;
+  const dict=ADMIN_UI_TEXT[adminUiLang];
+  if(!dict)return text;
+  const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+  if(el&&(el.tagName==='OPTION'||(el.closest&&el.closest('td')))){
+    const v=ADMIN_UI_STATUS_VARIANT[adminUiLang];
+    if(v&&own(v,text))return v[text];
+  }
+  if(own(dict,text))return dict[text];
+  for(const p of ADMIN_UI_PATTERNS){
+    const m=text.match(p.re);
+    if(m&&p[adminUiLang])return p[adminUiLang](m);
+  }
+  // "Prefix：message" (error toasts / alerts)
+  const i=text.indexOf('：');
+  if(i>0){
+    const head=text.slice(0,i+1);
+    if(own(dict,head))return dict[head]+adminTr(text.slice(i+1));
+  }
+  return text;
+}
+function adminTrTextNode(node){
+  const raw=node.nodeValue||'';
+  const trimmed=raw.trim();
+  if(!trimmed||!ADMIN_HAN_RE.test(trimmed))return;
+  const parent=node.parentElement;
+  if(!parent||parent.closest(ADMIN_TR_SKIP))return;
+  const tr=adminTr(trimmed,parent);
+  if(tr&&tr!==trimmed)node.nodeValue=raw.replace(trimmed,()=>tr);
+}
+function adminTrAttrs(el){
+  for(const a of ['placeholder','title','alt','aria-label']){
+    const v=el.getAttribute&&el.getAttribute(a);
+    if(!v||!ADMIN_HAN_RE.test(v)||el.closest(ADMIN_TR_SKIP_ATTR))continue;
+    const tr=adminTr(v,el);
+    if(tr!==v)el.setAttribute(a,tr);
+  }
+}
 function translateAdminUI(root=document.body){
-  if(!IS_ADMIN_PATH || adminUiLang==='zh' || !root)return;
-  const map=ADMIN_UI_TEXT[adminUiLang]||{};
+  if(!IS_ADMIN_PATH||adminUiLang==='zh'||!root)return;
+  if(root.nodeType===3){adminTrTextNode(root);return}
+  if(root.nodeType!==1)return;
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   const nodes=[];
   while(walker.nextNode())nodes.push(walker.currentNode);
-  for(const node of nodes){
-    const raw=node.nodeValue||'';
-    const trimmed=raw.trim();
-    if(!trimmed)continue;
-    if(map[trimmed]){
-      node.nodeValue=raw.replace(trimmed,map[trimmed]);
-      continue;
-    }
-    for(const [zh,tr] of Object.entries(map)){
-      if(raw.includes(zh)){
-        node.nodeValue=raw.replaceAll(zh,tr);
-      }
-    }
-  }
-  root.querySelectorAll?.('[placeholder]').forEach(el=>{
-    const p=el.getAttribute('placeholder');
-    if(map[p])el.setAttribute('placeholder',map[p]);
-  });
-  root.querySelectorAll?.('option').forEach(el=>{
-    const t=(el.textContent||'').trim();
-    if(map[t])el.textContent=map[t];
-  });
+  nodes.forEach(adminTrTextNode);
+  adminTrAttrs(root);
+  root.querySelectorAll('[placeholder],[title],[alt],[aria-label]').forEach(adminTrAttrs);
 }
+// Translate anything the admin UI adds later (modals, drawers, toasts, rebuilt tables, button states).
+function startAdminTranslator(){
+  if(!IS_ADMIN_PATH||window.__adminTranslatorStarted)return;
+  window.__adminTranslatorStarted=true;
+  new MutationObserver(muts=>{
+    if(adminUiLang==='zh')return;
+    for(const m of muts)for(const n of m.addedNodes)translateAdminUI(n);
+  }).observe(document.body,{childList:true,subtree:true});
+  const nativeAlert=window.alert.bind(window);
+  window.alert=msg=>nativeAlert(adminTr(String(msg)));
+}
+startAdminTranslator();
 
 const PUBLIC_SYS={
   zh:{home:'活動報名列表',loading:'正在讀取資料...',wait:'請稍候',none:'目前沒有公開活動。',loadFail:'目前無法讀取活動列表',open:'開放中',notstarted:'尚未開放',full:'已額滿',closed:'已截止',paused:'暫停',startAt:'將於 {time} KST (UTC+9) 開放報名',closedAt:'報名已於 {time} KST (UTC+9) 截止',fullDesc:'目前名額已額滿。',pausedDesc:'請稍後再試。'},
@@ -186,22 +699,26 @@ async function initPublicLanguage(){
   if(['ko','en','zh','ja'].includes(cached)){
     currentLang=cached;publicLanguageReady=true;return currentLang;
   }
-  let lang='en';
-  try{
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),3000);
-    const res=await fetch('https://ipwho.is/?fields=success,country_code',{cache:'no-store',signal:controller.signal});
-    clearTimeout(timer);
-    const geo=await res.json();
-    const c=String(geo?.country_code||'').toUpperCase();
-    if(c==='KR')lang='ko';
-    else if(c==='TW'||c==='CN')lang='zh';
-    else lang='en';
-  }catch(e){
-    const nav=String(navigator.language||'').toLowerCase();
-    if(nav.startsWith('ko'))lang='ko';
-    else if(nav.startsWith('zh'))lang='zh';
-    else if(nav.startsWith('ja'))lang='ja';
+  // 1) A Korean / Chinese / Japanese browser language decides instantly (no network call).
+  const navLang=String((navigator.languages&&navigator.languages[0])||navigator.language||'').toLowerCase();
+  let lang='';
+  if(navLang.startsWith('ko'))lang='ko';
+  else if(navLang.startsWith('zh'))lang='zh';
+  else if(navLang.startsWith('ja'))lang='ja';
+  // 2) Otherwise (e.g. English browser) fall back to the visitor's country, with a short timeout.
+  if(!lang){
+    lang='en';
+    try{
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),1500);
+      const res=await fetch('https://ipwho.is/?fields=success,country_code',{cache:'no-store',signal:controller.signal});
+      clearTimeout(timer);
+      const geo=await res.json();
+      const c=String(geo?.country_code||'').toUpperCase();
+      if(c==='KR')lang='ko';
+      else if(c==='TW'||c==='CN'||c==='HK'||c==='MO')lang='zh';
+      else if(c==='JP')lang='ja';
+    }catch(e){}
   }
   currentLang=lang;
   sessionStorage.setItem('eson_public_lang_auto',lang);
@@ -212,11 +729,42 @@ async function initPublicLanguage(){
 
 const ADMIN_TITLE='Eson Event Admin Dashboard';
 const i18n={
-  zh:{open:'報名開放中',deadline:'報名截止',email:'Email',emailHint:'每個 Email 僅能報名一次，送出後無法自行修改。',submit:'送出報名',confirmTitle:'確認送出報名？',confirmText:'請再次確認您填寫的資料正確無誤。報名資料送出後將無法自行修改。',back:'返回檢查',confirm:'確認送出',success:'報名成功！',code:'報名編號',summary:'本次填寫內容',save:'請截圖保存',saveText:'本頁面關閉或重新整理後，將無法再次查看此次提交內容。報名資料送出後亦無法自行修改，請截圖保存您的報名編號與填寫內容。',notStarted:'報名尚未開始',full:'本活動已額滿',closed:'本次報名已截止',paused:'報名目前暫停',endPreview:'結束預覽'},
-  ko:{open:'신청 접수 중',deadline:'신청 마감',email:'이메일',emailHint:'이메일 1개당 1회만 신청할 수 있으며, 제출 후에는 수정할 수 없습니다.',submit:'신청서 제출',confirmTitle:'신청서를 제출하시겠습니까?',confirmText:'입력한 정보가 정확한지 다시 확인해 주세요. 제출 후에는 신청 내용을 직접 수정할 수 없습니다.',back:'다시 확인',confirm:'제출하기',success:'신청이 완료되었습니다!',code:'신청 번호',summary:'제출한 내용',save:'화면을 캡처해 보관해 주세요',saveText:'이 페이지를 닫거나 새로고침하면 제출 내용을 다시 확인할 수 없습니다. 신청 번호와 작성 내용을 캡처해 보관해 주세요.',notStarted:'아직 신청 기간이 아닙니다',full:'신청이 마감되었습니다',closed:'신청 기간이 종료되었습니다',paused:'현재 신청이 일시 중지되었습니다',endPreview:'미리보기 종료'},
-  en:{open:'Registration Open',deadline:'Registration closes',email:'Email',emailHint:'Each email may register once. Submitted responses cannot be edited.',submit:'Submit Registration',confirmTitle:'Submit your registration?',confirmText:'Please confirm that all information is correct. You will not be able to edit your response after submission.',back:'Go Back',confirm:'Confirm & Submit',success:'Registration Complete!',code:'Registration No.',summary:'Your Submitted Information',save:'Please take a screenshot',saveText:'This submission summary will no longer be available after you close or refresh this page. Please save a screenshot of your registration number and responses.',notStarted:'Registration has not opened yet',full:'Registration is full',closed:'Registration has closed',paused:'Registration is temporarily paused',endPreview:'Exit Preview'},
-  ja:{open:'受付中',deadline:'受付締切',email:'メールアドレス',emailHint:'1つのメールアドレスにつき1回のみ申込可能です。送信後は内容を変更できません。',submit:'申込を送信',confirmTitle:'申込を送信しますか？',confirmText:'入力内容に誤りがないか、もう一度ご確認ください。送信後は申込内容を変更できません。',back:'確認に戻る',confirm:'確認して送信',success:'申込が完了しました！',code:'申込番号',summary:'今回の入力内容',save:'スクリーンショットを保存してください',saveText:'このページを閉じる、または再読み込みすると、今回の送信内容は再表示できません。申込番号と入力内容をスクリーンショットで保存してください。',notStarted:'まだ受付開始前です',full:'定員に達しました',closed:'受付は終了しました',paused:'現在受付を一時停止しています',endPreview:'プレビューを終了'}
+  zh:{open:'報名開放中',deadline:'報名截止',email:'Email',emailHint:'每個 Email 僅能報名一次，送出後無法自行修改。',submit:'送出報名',confirmTitle:'確認送出報名？',confirmText:'請再次確認您填寫的資料正確無誤。報名資料送出後將無法自行修改。',back:'返回檢查',confirm:'確認送出',success:'報名成功！',code:'報名編號',summary:'本次填寫內容',save:'請截圖保存',saveText:'本頁面關閉或重新整理後，將無法再次查看此次提交內容。報名資料送出後亦無法自行修改，請截圖保存您的報名編號與填寫內容。',notStarted:'報名尚未開始',full:'本活動已額滿',closed:'本次報名已截止',paused:'報名目前暫停',endPreview:'結束預覽',other:'其他',otherPh:'其他內容',choose:'請選擇',inputPh:'請輸入內容',emailRequired:'Email 為必填',required:'請完成必填欄位：{title}',sending:'送出中...',errNotStarted:'報名尚未開始。',errPaused:'目前暫停接受報名。',errClosed:'報名已截止。',errFull:'名額已額滿。',errDuplicate:'這個 Email 已經有報名紀錄。若你剛剛才送出，可能其實已經報名成功。',submitFailed:'送出失敗：',badFormat:'活動資料格式不完整',notOpen:'活動目前無法開啟',cannotOpenForm:'無法開啟表單',readFail:'讀取失敗',reload:'重新讀取',imageBlock:'圖片區塊'},
+  ko:{open:'신청 접수 중',deadline:'신청 마감',email:'이메일',emailHint:'이메일 1개당 1회만 신청할 수 있으며, 제출 후에는 수정할 수 없습니다.',submit:'신청서 제출',confirmTitle:'신청서를 제출하시겠습니까?',confirmText:'입력한 정보가 정확한지 다시 확인해 주세요. 제출 후에는 신청 내용을 직접 수정할 수 없습니다.',back:'다시 확인',confirm:'제출하기',success:'신청이 완료되었습니다!',code:'신청 번호',summary:'제출한 내용',save:'화면을 캡처해 보관해 주세요',saveText:'이 페이지를 닫거나 새로고침하면 제출 내용을 다시 확인할 수 없습니다. 신청 번호와 작성 내용을 캡처해 보관해 주세요.',notStarted:'아직 신청 기간이 아닙니다',full:'신청이 마감되었습니다',closed:'신청 기간이 종료되었습니다',paused:'현재 신청이 일시 중지되었습니다',endPreview:'미리보기 종료',other:'기타',otherPh:'기타 내용',choose:'선택해 주세요',inputPh:'내용을 입력해 주세요',emailRequired:'이메일은 필수 입력 항목입니다',required:'필수 항목을 입력해 주세요: {title}',sending:'제출 중...',errNotStarted:'아직 신청이 시작되지 않았습니다.',errPaused:'현재 신청이 일시 중지되었습니다.',errClosed:'신청이 마감되었습니다.',errFull:'정원이 모두 찼습니다.',errDuplicate:'이 이메일로 이미 신청 내역이 있습니다. 방금 제출하셨다면 이미 신청이 완료되었을 수 있습니다.',submitFailed:'제출에 실패했습니다: ',badFormat:'이벤트 데이터 형식이 올바르지 않습니다',notOpen:'현재 이벤트를 열 수 없습니다',cannotOpenForm:'신청서를 열 수 없습니다',readFail:'불러오지 못했습니다',reload:'다시 불러오기',imageBlock:'이미지'},
+  en:{open:'Registration Open',deadline:'Registration closes',email:'Email',emailHint:'Each email may register once. Submitted responses cannot be edited.',submit:'Submit Registration',confirmTitle:'Submit your registration?',confirmText:'Please confirm that all information is correct. You will not be able to edit your response after submission.',back:'Go Back',confirm:'Confirm & Submit',success:'Registration Complete!',code:'Registration No.',summary:'Your Submitted Information',save:'Please take a screenshot',saveText:'This submission summary will no longer be available after you close or refresh this page. Please save a screenshot of your registration number and responses.',notStarted:'Registration has not opened yet',full:'Registration is full',closed:'Registration has closed',paused:'Registration is temporarily paused',endPreview:'Exit Preview',other:'Other',otherPh:'Other',choose:'Select an option',inputPh:'Enter your answer',emailRequired:'Email is required',required:'Please complete the required field: {title}',sending:'Submitting...',errNotStarted:'Registration has not started yet.',errPaused:'Registration is temporarily paused.',errClosed:'Registration has closed.',errFull:'Registration is full.',errDuplicate:'This email has already been registered. If you just submitted, your registration may already have gone through.',submitFailed:'Submission failed: ',badFormat:'The event data is incomplete',notOpen:'This event cannot be opened right now',cannotOpenForm:'Unable to open the form',readFail:'Failed to load',reload:'Reload',imageBlock:'Image'},
+  ja:{open:'受付中',deadline:'受付締切',email:'メールアドレス',emailHint:'1つのメールアドレスにつき1回のみ申込可能です。送信後は内容を変更できません。',submit:'申込を送信',confirmTitle:'申込を送信しますか？',confirmText:'入力内容に誤りがないか、もう一度ご確認ください。送信後は申込内容を変更できません。',back:'確認に戻る',confirm:'確認して送信',success:'申込が完了しました！',code:'申込番号',summary:'今回の入力内容',save:'スクリーンショットを保存してください',saveText:'このページを閉じる、または再読み込みすると、今回の送信内容は再表示できません。申込番号と入力内容をスクリーンショットで保存してください。',notStarted:'まだ受付開始前です',full:'定員に達しました',closed:'受付は終了しました',paused:'現在受付を一時停止しています',endPreview:'プレビューを終了',other:'その他',otherPh:'その他の内容',choose:'選択してください',inputPh:'内容を入力してください',emailRequired:'メールアドレスは必須です',required:'必須項目を入力してください：{title}',sending:'送信中...',errNotStarted:'受付はまだ開始されていません。',errPaused:'現在、受付を一時停止しています。',errClosed:'受付は終了しました。',errFull:'定員に達しました。',errDuplicate:'このメールアドレスでは既に申込があります。先ほど送信した場合、すでに申込が完了している可能性があります。',submitFailed:'送信に失敗しました：',badFormat:'イベントデータの形式が正しくありません',notOpen:'現在このイベントを開けません',cannotOpenForm:'フォームを開けません',readFail:'読み込みに失敗しました',reload:'再読み込み',imageBlock:'画像'}
 };
+
+function PT(k,vars){
+  let v=(i18n[currentLang]&&i18n[currentLang][k])??i18n.en[k]??k;
+  if(vars)for(const [a,b] of Object.entries(vars))v=v.split('{'+a+'}').join(b);
+  return v;
+}
+function syncHtmlLang(){
+  const m={zh:'zh-Hant',ko:'ko',en:'en',ja:'ja'};
+  document.documentElement.lang=m[IS_ADMIN_PATH?adminUiLang:currentLang]||'en';
+}
+function snapshotPublicForm(){
+  const out=[];
+  document.querySelectorAll('.public-form [name],.public-form [data-other-for]').forEach(el=>{
+    const key=el.name?('n:'+el.name):('o:'+el.dataset.otherFor);
+    if(el.type==='radio'||el.type==='checkbox'){if(el.checked)out.push({key,value:el.value,checked:true})}
+    else out.push({key,value:el.value});
+  });
+  return out;
+}
+function restorePublicForm(snap){
+  if(!snap||!snap.length)return;
+  const els=[...document.querySelectorAll('.public-form [name],.public-form [data-other-for]')];
+  for(const x of snap){
+    for(const el of els){
+      const key=el.name?('n:'+el.name):('o:'+el.dataset.otherFor);
+      if(key!==x.key)continue;
+      if(el.type==='radio'||el.type==='checkbox'){if(x.checked&&el.value===x.value)el.checked=true}
+      else el.value=x.value;
+    }
+  }
+}
 
 let demoEvents=[];
 
@@ -520,6 +1068,7 @@ function loginStrings(){return {
 }[adminUiLang]||this.zh}
 function loginLangMenu(){return `<div class="login-lang-wrap menu-wrap"><button class="btn profile-btn lang-btn" id="loginLangBtn">${adminLangName()} ${mi('arrow_drop_down')}</button><div class="dropdown-menu lang-menu" id="loginLangMenu"><button class="menu-item ${adminUiLang==='ko'?'active':''}" data-login-lang="ko">한국어</button><button class="menu-item ${adminUiLang==='en'?'active':''}" data-login-lang="en">English</button><button class="menu-item ${adminUiLang==='zh'?'active':''}" data-login-lang="zh">中文</button></div></div>`}
 function renderLogin(){
+  syncHtmlLang();
   const t=loginStrings();
   app.innerHTML=`<div class="login-wrap"><section class="login-panel">${loginLangMenu()}<div class="login-box"><div class="brand login-brand"><span>${ADMIN_TITLE}</span></div><h2>${t.title}</h2><p class="muted">${t.desc}</p><div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="name@example.com"></div><div class="field"><label>${t.password}</label><input id="loginPassword" type="password" autocomplete="current-password"></div><button class="btn primary" id="loginSubmitBtn" style="width:100%;margin-top:7px">${t.login}</button><div class="login-note">Firebase Authentication</div></div></section></div>${protoNav()}`;
   bind();
@@ -543,9 +1092,11 @@ function renderLogin(){
     }
   };
 }
-function bindLoginLang(){const btn=document.querySelector('#loginLangBtn'),menu=document.querySelector('#loginLangMenu');if(!btn||!menu)return;btn.onclick=e=>{e.stopPropagation();menu.classList.toggle('open')};document.querySelectorAll('[data-login-lang]').forEach(x=>x.onclick=()=>{adminUiLang=x.dataset.loginLang;localStorage.setItem('eson_login_lang',adminUiLang);renderLogin()});document.addEventListener('click',()=>menu.classList.remove('open'),{once:true});}
+function bindLoginLang(){
+  if(!window.__menuOutsideClickBound){window.__menuOutsideClickBound=true;document.addEventListener('click',e=>{if(!e.target.closest('.menu-wrap'))document.querySelectorAll('.dropdown-menu.open').forEach(m=>m.classList.remove('open'))})}
+  const btn=document.querySelector('#loginLangBtn'),menu=document.querySelector('#loginLangMenu');if(!btn||!menu)return;btn.onclick=e=>{e.stopPropagation();menu.classList.toggle('open')};document.querySelectorAll('[data-login-lang]').forEach(x=>x.onclick=()=>{adminUiLang=x.dataset.loginLang;localStorage.setItem('eson_login_lang',adminUiLang);renderLogin()});}
 function dashboardRows(){const q=(dashboardQuery||'').trim().toLowerCase();return demoEvents.filter(e=>{const statusPass=dashboardFilter==='all'||(dashboardFilter==='open'&&e.status==='open')||(dashboardFilter==='upcoming'&&e.status==='upcoming')||(dashboardFilter==='ended'&&['closed','full'].includes(e.status))||(dashboardFilter==='draft'&&e.status==='draft');const haystack=(e.name+' '+(e.slug||'')+' /event/'+(e.slug||'')).toLowerCase();const queryPass=!q||haystack.includes(q);return statusPass&&queryPass})}
-function dashboardTableHtml(){const rows=dashboardRows(); if(!rows.length)return `<tr><td colspan="6"><div class="empty-state">${mi('search_off')}<b>找不到符合條件的活動</b><span>請調整搜尋關鍵字或篩選條件。</span></div></td></tr>`;return rows.map(e=>{const publicCell=e.status==='draft'?`<span class="unpublished-label">${mi('hide_source')} 尚未發布</span>`:`<button class="btn small" data-open-public="${e.id}" title="開啟 https://eson1228.com/event/${e.slug}/">${mi('open_in_new')} 開啟前台</button>`;return `<tr><td><b>${e.name}</b><div class="tiny muted" style="margin-top:4px">${e.status==='draft'?'尚未產生公開網址':'/event/'+e.slug+'/'}</div></td><td><span class="badge ${e.status}">${e.label}</span></td><td>${e.range}</td><td><b>${e.count} / ${e.cap}</b><div class="progress"><i style="width:${Math.min(100,e.count/e.cap*100)}%"></i></div></td><td>${publicCell}</td><td><div class="row-actions"><button class="btn small" data-edit-event="${e.id}">編輯</button>${e.status==='draft'?'':`<button class="btn small" data-view-responses="${e.id}">查看資料</button>`}${['full','closed'].includes(e.status)?'<button class="btn small soft" data-capacity="'+e.id+'">再次開放增收</button>':''}<button class="btn small danger" data-delete-event="${e.id}">刪除</button></div></td></tr>`}).join('')}
+function dashboardTableHtml(){const rows=dashboardRows(); if(!rows.length)return `<tr><td colspan="6"><div class="empty-state">${mi('search_off')}<b>找不到符合條件的活動</b><span>請調整搜尋關鍵字或篩選條件。</span></div></td></tr>`;return rows.map(e=>{const publicCell=e.status==='draft'?`<span class="unpublished-label">${mi('hide_source')} 尚未發布</span>`:`<button class="btn small" data-open-public="${esc(e.id)}" title="開啟 https://eson1228.com/event/${esc(e.slug)}/">${mi('open_in_new')} 開啟前台</button>`;return `<tr><td><b>${esc(e.name)}</b><div class="tiny muted" style="margin-top:4px">${e.status==='draft'?'尚未產生公開網址':'/event/'+esc(e.slug)+'/'}</div></td><td><span class="badge ${e.status}">${e.label}</span></td><td>${e.range}</td><td><b>${e.count} / ${e.cap}</b><div class="progress"><i style="width:${e.cap>0?Math.min(100,e.count/e.cap*100):0}%"></i></div></td><td>${publicCell}</td><td><div class="row-actions"><button class="btn small" data-edit-event="${esc(e.id)}">編輯</button>${e.status==='draft'?'':`<button class="btn small" data-view-responses="${esc(e.id)}">查看資料</button>`}${['full','closed'].includes(e.status)?'<button class="btn small soft" data-capacity="'+esc(e.id)+'">再次開放增收</button>':''}<button class="btn small danger" data-delete-event="${esc(e.id)}">刪除</button></div></td></tr>`}).join('')}
 
 function bindTopMenus(){
   const profileBtn=document.querySelector('#profileBtn');
@@ -597,12 +1148,15 @@ function bindTopMenus(){
     showAdminManage();
   });
 
-  document.addEventListener('click',e=>{
-    if(!e.target.closest('.menu-wrap')) closeMenus();
-  },{once:true});
+  if(!window.__menuOutsideClickBound){
+    window.__menuOutsideClickBound=true;
+    document.addEventListener('click',e=>{
+      if(!e.target.closest('.menu-wrap'))document.querySelectorAll('.dropdown-menu.open').forEach(m=>m.classList.remove('open'));
+    });
+  }
 }
 
-function renderDashboard(){app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><h1>活動管理</h1><div class="muted">所有時間皆以 KST（UTC+9）顯示</div></div><div class="actions"><button class="btn primary" data-nav="editor">${mi('add')}新增活動</button></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="dashboardSearch" placeholder="搜尋活動名稱或網址" value="${dashboardQuery.replaceAll('"','&quot;')}" /></div><div class="seg" id="dashboardFilters"><button data-filter="all" class="${dashboardFilter==='all'?'active':''}">全部</button><button data-filter="open" class="${dashboardFilter==='open'?'active':''}">開放中</button><button data-filter="upcoming" class="${dashboardFilter==='upcoming'?'active':''}">未開始</button><button data-filter="ended" class="${dashboardFilter==='ended'?'active':''}">已結束</button><button data-filter="draft" class="${dashboardFilter==='draft'?'active':''}">草稿</button></div></div><div class="card table-card"><table class="table"><thead><tr><th>活動名稱</th><th>狀態</th><th>報名期間（KST）</th><th>報名</th><th>前台頁面</th><th>操作</th></tr></thead><tbody id="eventRows">${dashboardTableHtml()}</tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#dashboardSearch').addEventListener('input',e=>{dashboardQuery=e.target.value;refreshDashboardRows()});document.querySelectorAll('#dashboardFilters [data-filter]').forEach(b=>b.onclick=()=>{dashboardFilter=b.dataset.filter;document.querySelectorAll('#dashboardFilters button').forEach(x=>x.classList.toggle('active',x===b));refreshDashboardRows()});bindCapacityButtons();bindDashboardEditors();bindPublicButtons();loadDashboardFromApi();}
+function renderDashboard(){app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><h1>活動管理</h1><div class="muted">所有時間皆以 KST（UTC+9）顯示</div></div><div class="actions"><button class="btn primary" data-nav="editor">${mi('add')}新增活動</button></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="dashboardSearch" placeholder="搜尋活動名稱或網址" value="${esc(dashboardQuery)}" /></div><div class="seg" id="dashboardFilters"><button data-filter="all" class="${dashboardFilter==='all'?'active':''}">全部</button><button data-filter="open" class="${dashboardFilter==='open'?'active':''}">開放中</button><button data-filter="upcoming" class="${dashboardFilter==='upcoming'?'active':''}">未開始</button><button data-filter="ended" class="${dashboardFilter==='ended'?'active':''}">已結束</button><button data-filter="draft" class="${dashboardFilter==='draft'?'active':''}">草稿</button></div></div><div class="card table-card"><table class="table"><thead><tr><th>活動名稱</th><th>狀態</th><th>報名期間（KST）</th><th>報名</th><th>前台頁面</th><th>操作</th></tr></thead><tbody id="eventRows">${dashboardTableHtml()}</tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#dashboardSearch').addEventListener('input',e=>{dashboardQuery=e.target.value;refreshDashboardRows()});document.querySelectorAll('#dashboardFilters [data-filter]').forEach(b=>b.onclick=()=>{dashboardFilter=b.dataset.filter;document.querySelectorAll('#dashboardFilters button').forEach(x=>x.classList.toggle('active',x===b));refreshDashboardRows()});bindCapacityButtons();bindDashboardEditors();bindPublicButtons();loadDashboardFromApi();}
 function refreshDashboardRows(){document.querySelector('#eventRows').innerHTML=dashboardTableHtml();bind();bindCapacityButtons();bindDashboardEditors();bindPublicButtons();}
 function bindCapacityButtons(){document.querySelectorAll('[data-capacity]').forEach(b=>b.onclick=()=>showCapacityModal(b.dataset.capacity));}
 function bindPublicButtons(){document.querySelectorAll('[data-open-public]').forEach(btn=>btn.onclick=()=>{const ev=demoEvents.find(x=>x.id===btn.dataset.openPublic);if(!ev||!ev.slug)return;window.open(PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(ev.slug),'_blank')})}
@@ -697,6 +1251,26 @@ function showDeleteEventModal(eventId){
   };
 }
 
+function compressImageFile(file,maxW=1200,maxBytes=700*1024){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const scale=Math.min(1,maxW/img.width);
+      const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      let out=c.toDataURL('image/webp',0.85);
+      if(!out.startsWith('data:image/webp'))out=c.toDataURL('image/jpeg',0.85);
+      if(out.length*0.75>maxBytes){const retry=c.toDataURL('image/jpeg',0.7);if(retry.length<out.length)out=retry}
+      if(out.length*0.75>maxBytes)return reject(new Error('圖片檔案過大，請改用較小的圖片。'));
+      resolve(out);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('圖片讀取失敗'))};
+    img.src=url;
+  });
+}
 function esc(v=''){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function currentBlock(){return editorBlocks.find(b=>b.id===selectedBlockId)||editorBlocks[0]}
 function req(b){return b.required?' <span class="req">*</span>':''}
@@ -709,8 +1283,8 @@ function renderEditorBlock(b){
   if(b.type==='subheading')body=`<div class="subheading-block ${b.align==='center'?'align-center':''}">${esc(b.title||'小標題')}</div>`;
   if(b.type==='short')body=`<div class="q-title">${esc(b.title||'簡答')}${req(b)}</div>${descHtml(b)}<div class="form-input">${esc(b.placeholder||'請輸入內容')}</div>`;
   if(b.type==='long')body=`<div class="q-title">${esc(b.title||'詳答')}${req(b)}</div>${descHtml(b)}<div class="form-textarea long-${b.height||'medium'}">${esc(b.placeholder||'請輸入內容')}</div>`;
-  if(b.type==='radio')body=`<div class="q-title">${esc(b.title||'單選')}${req(b)}</div>${descHtml(b)}${(b.options||[]).map(o=>`<div class="choice"><span class="radio-dot"></span>${esc(o)}</div>`).join('')}${b.other?`<div class="choice"><span class="radio-dot"></span>其他：[________]</div>`:''}`;
-  if(b.type==='checkbox')body=`<div class="q-title">${esc(b.title||'複選')}${req(b)}</div>${descHtml(b)}${(b.options||[]).map(o=>`<div class="choice"><span class="check-dot"></span>${esc(o)}</div>`).join('')}${b.other?`<div class="choice"><span class="check-dot"></span>其他：[________]</div>`:''}`;
+  if(b.type==='radio')body=`<div class="q-title">${esc(b.title||'單選')}${req(b)}</div>${descHtml(b)}${(b.options||[]).map(o=>`<div class="choice"><span class="radio-dot"></span>${esc(o)}</div>`).join('')}${b.other?`<div class="choice"><span class="radio-dot"></span>${adminTr('其他：[________]')}</div>`:''}`;
+  if(b.type==='checkbox')body=`<div class="q-title">${esc(b.title||'複選')}${req(b)}</div>${descHtml(b)}${(b.options||[]).map(o=>`<div class="choice"><span class="check-dot"></span>${esc(o)}</div>`).join('')}${b.other?`<div class="choice"><span class="check-dot"></span>${adminTr('其他：[________]')}</div>`:''}`;
   if(b.type==='select')body=`<div class="q-title">${esc(b.title||'下拉選單')}${req(b)}</div>${descHtml(b)}<div class="form-select">${esc(b.placeholder||'請選擇')} ${mi('arrow_drop_down')}</div>`;
   if(b.type==='grid'){
     const rows=b.rows||['列 1','列 2'], cols=b.cols||['選項 A','選項 B'];
@@ -719,10 +1293,10 @@ function renderEditorBlock(b){
   if(b.type==='date')body=`<div class="q-title">${esc(b.title||'日期')}${req(b)}</div>${descHtml(b)}<div class="form-input">YYYY / MM / DD</div>`;
   if(b.type==='time')body=`<div class="q-title">${esc(b.title||'時間')}${req(b)}</div>${descHtml(b)}<div class="form-input">HH : MM</div>`;
   if(b.type==='paragraph')body=`<div class="paragraph-block ${b.align==='center'?'align-center':''}">${esc(b.text||'內文')}</div>`;
-  if(b.type==='image')body=b.dataUrl?`<div class="image-preview-block size-${b.size||'large'}"><img src="${b.dataUrl}" alt="${esc(b.alt||'')}" /></div>`:`<div class="image-placeholder size-${b.size||'large'}">${mi('image')}<span>圖片區塊</span></div>`;
+  if(b.type==='image')body=b.dataUrl?`<div class="image-preview-block size-${b.size||'large'}"><img src="${esc(b.dataUrl)}" alt="${esc(b.alt||'')}" /></div>`:`<div class="image-placeholder size-${b.size||'large'}">${mi('image')}<span>圖片區塊</span></div>`;
   if(b.type==='divider')body=`<div class="divider"></div>`;
   if(b.type==='spacer')body=`<div class="spacer" style="height:${b.height==='small'?16:b.height==='large'?54:30}px"></div>`;
-  return `<div class="block ${b.id===selectedBlockId?'selected':''}" data-id="${b.id}" data-block="${b.type}" draggable="${b.locked?'false':'true'}">${drag}${b.locked?'':`<button class="block-menu" title="刪除區塊">${mi('delete')}</button>`}${body}</div>`;
+  return `<div class="block ${b.id===selectedBlockId?'selected':''}" data-id="${esc(b.id)}" data-block="${esc(b.type)}" draggable="${b.locked?'false':'true'}">${drag}${b.locked?'':`<button class="block-menu" title="刪除區塊">${mi('delete')}</button>`}${body}</div>`;
 }
 function formBlocks(){return editorBlocks.map(renderEditorBlock).join('')}
 function toggleRow(label,key,on,locked=false,help=''){return `<div class="toggle-row"><div><b class="small">${label}</b>${help?`<div class="help">${help}</div>`:''}</div><div class="switch ${on?'on':''} ${locked?'locked-switch':''} ${locked?'':'setting-switch'}" ${locked?'':`data-toggle="${key}"`}></div></div>`}
@@ -742,17 +1316,17 @@ function settingsPanel(block=currentBlock()){
   if(['short','long','radio','checkbox','select','grid','date','time'].includes(block.type))h+=toggleRow('必填','required',!!block.required);
   if(['heading','subheading'].includes(block.type)){h+=textField('文字','title',block.title)+`<div class="field"><label>對齊</label><select data-prop="align"><option value="left" ${block.align!=='center'?'selected':''}>靠左</option><option value="center" ${block.align==='center'?'selected':''}>置中</option></select></div>`;}
   if(block.type==='paragraph'){h+=textField('內容','text',block.text,true)+`<div class="field"><label>對齊</label><select data-prop="align"><option value="left" ${block.align!=='center'?'selected':''}>靠左</option><option value="center" ${block.align==='center'?'selected':''}>置中</option></select></div>`;}
-  if(block.type==='image'){h+=`<input type="file" id="imageFileInput" accept="image/*" style="display:none"><button class="btn soft" style="width:100%" id="chooseImageBtn">${mi('upload')}選擇圖片</button><div class="field"><label>替代文字</label><input data-prop="alt" value="${esc(block.alt||'')}"></div><div class="field"><label>尺寸</label><select data-prop="size"><option value="small" ${block.size==='small'?'selected':''}>小</option><option value="medium" ${block.size==='medium'?'selected':''}>中</option><option value="large" ${(!block.size||block.size==='large')?'selected':''}>大</option><option value="full" ${block.size==='full'?'selected':''}>滿寬</option></select></div><p class="help">此頁面只在瀏覽器內預覽圖片；正式版儲存草稿時才會上傳 GitHub。</p>`;}
+  if(block.type==='image'){h+=`<input type="file" id="imageFileInput" accept="image/*" style="display:none"><button class="btn soft" style="width:100%" id="chooseImageBtn">${mi('upload')}選擇圖片</button><div class="field"><label>替代文字</label><input data-prop="alt" value="${esc(block.alt||'')}"></div><div class="field"><label>尺寸</label><select data-prop="size"><option value="small" ${block.size==='small'?'selected':''}>小</option><option value="medium" ${block.size==='medium'?'selected':''}>中</option><option value="large" ${(!block.size||block.size==='large')?'selected':''}>大</option><option value="full" ${block.size==='full'?'selected':''}>滿寬</option></select></div><p class="help">圖片會壓縮後直接存放在表單資料中，請避免使用過大的圖片。</p>`;}
   if(block.type==='divider')h+=`<p class="help">此元件沒有額外設定。</p>`;
   if(block.type==='spacer')h+=`<div class="field"><label>高度</label><select data-prop="height"><option value="small" ${block.height==='small'?'selected':''}>小</option><option value="medium" ${(!block.height||block.height==='medium')?'selected':''}>中</option><option value="large" ${block.height==='large'?'selected':''}>大</option></select></div>`;
   return h;
 }
 function editorActionButtons(){return editorPublished?`<button class="btn primary" id="saveEditBtn">儲存編輯</button>`:`<button class="btn" id="saveDraftBtn">儲存草稿</button><button class="btn primary" id="publishBtn">發布</button>`}
 function editorPageSwitch(){return `<div class="page-switch-wrap"><span class="page-switch-label">編輯頁面</span><div class="page-switch"><button class="${editorPage==='form'?'active':''}" data-editor-page="form">${mi('description')} 報名表單</button><button class="${editorPage==='success'?'active':''}" data-editor-page="success">${mi('task_alt')} 報名成功頁</button></div></div>`}
-function successPageCanvas(){return `<div class="form-sheet"><div class="form-accent"></div><div class="form-body"><div class="success-editor-fixed"><div class="success-icon">${mi('check_circle')}</div><div class="event-title" style="font-size:30px">報名成功！</div><div class="event-desc">您的報名資料已成功送出。</div><div class="success-code-box"><span class="muted small">報名編號</span><b>#0028</b></div><div class="summary-preview"><b>本次填寫內容</b><div class="summary-line"><span>Email</span><span>amy@example.com</span></div><div class="summary-line"><span>姓名</span><span>Amy</span></div></div><div class="save-reminder">${mi('photo_camera')} <div><b>請截圖保存</b><div class="help">本頁面關閉或重新整理後，將無法再次查看此次提交內容。</div></div></div></div><div class="editable-success-note"><div class="drag-handle static">${mi('edit')}<span>管理員補充說明</span></div><div class="paragraph-block">${esc(successNote)}</div></div></div></div>`}
+function successPageCanvas(){return `<div class="form-sheet"><div class="form-accent"></div><div class="form-body"><div class="success-editor-fixed"><div class="success-icon">${mi('check_circle')}</div><div class="event-title" style="font-size:30px">${adminTr('報名成功！')}</div><div class="event-desc">您的報名資料已成功送出。</div><div class="success-code-box"><span class="muted small">報名編號</span><b>#0028</b></div><div class="summary-preview"><b>本次填寫內容</b><div class="summary-line"><span>Email</span><span>amy@example.com</span></div><div class="summary-line"><span>姓名</span><span>Amy</span></div></div><div class="save-reminder">${mi('photo_camera')} <div><b>請截圖保存</b><div class="help">本頁面關閉或重新整理後，將無法再次查看此次提交內容。</div></div></div></div><div class="editable-success-note"><div class="drag-handle static">${mi('edit')}<span>管理員補充說明</span></div><div class="paragraph-block">${esc(successNote)}</div></div></div></div>`}
 
-function blockOutlineLabel(b){if(b.type==='email')return 'Email（固定）';if(['short','long','radio','checkbox','select','grid','date','time','heading','subheading'].includes(b.type))return b.title||'未命名區塊';if(b.type==='paragraph')return (b.text||'內文').slice(0,18);return ({image:'圖片',divider:'分隔線',spacer:'留白'})[b.type]||b.type}
-function editorSideContent(){if(editorSideTab==='outline'){return `<div class="seg editor-tabs" style="margin-bottom:12px"><button data-side-tab="components">元件</button><button class="active" data-side-tab="outline">大綱</button></div><div class="outline-help">點擊項目可快速定位到表單區塊；Email 固定第一欄，其餘項目也可以在大綱中拖曳調整順序。</div><div class="outline-list" id="outlineList">${editorBlocks.map(b=>`<button class="outline-item ${b.id===selectedBlockId?'active':''}" data-outline-id="${b.id}" draggable="${b.locked?'false':'true'}">${b.locked?`<span class="outline-lock">${mi('lock')}</span>`:`<span class="outline-drag">${mi('drag_indicator')}</span>`}<span class="outline-label">${esc(blockOutlineLabel(b))}</span></button>`).join('')}</div><div class="side-title">活動資訊</div><button class="btn soft" style="width:100%" id="activitySettingsBtn">${mi('settings')}活動基本設定</button>`}
+function blockOutlineLabel(b){if(b.type==='email')return adminTr('Email（固定）');if(['short','long','radio','checkbox','select','grid','date','time','heading','subheading'].includes(b.type))return b.title||adminTr('未命名區塊');if(b.type==='paragraph')return (b.text||adminTr('內文')).slice(0,18);return ({image:adminTr('圖片'),divider:adminTr('分隔線'),spacer:adminTr('留白')})[b.type]||b.type}
+function editorSideContent(){if(editorSideTab==='outline'){return `<div class="seg editor-tabs" style="margin-bottom:12px"><button data-side-tab="components">元件</button><button class="active" data-side-tab="outline">大綱</button></div><div class="outline-help">點擊項目可快速定位到表單區塊；Email 固定第一欄，其餘項目也可以在大綱中拖曳調整順序。</div><div class="outline-list" id="outlineList">${editorBlocks.map(b=>`<button class="outline-item ${b.id===selectedBlockId?'active':''}" data-outline-id="${esc(b.id)}" draggable="${b.locked?'false':'true'}">${b.locked?`<span class="outline-lock">${mi('lock')}</span>`:`<span class="outline-drag">${mi('drag_indicator')}</span>`}<span class="outline-label">${esc(blockOutlineLabel(b))}</span></button>`).join('')}</div><div class="side-title">活動資訊</div><button class="btn soft" style="width:100%" id="activitySettingsBtn">${mi('settings')}活動基本設定</button>`}
 return `<div class="seg editor-tabs" style="margin-bottom:12px"><button class="active" data-side-tab="components">元件</button><button data-side-tab="outline">大綱</button></div><div class="side-title">表單欄位</div><div class="tool-list"><button class="tool" data-add="short">${mi('short_text')}簡答</button><button class="tool" data-add="long">${mi('notes')}詳答</button><button class="tool" data-add="radio">${mi('radio_button_checked')}單選</button><button class="tool" data-add="checkbox">${mi('check_box')}複選</button><button class="tool" data-add="select">${mi('arrow_drop_down_circle')}下拉選單</button><button class="tool" data-add="grid">${mi('grid_on')}單選表格</button><button class="tool" data-add="date">${mi('calendar_month')}日期</button><button class="tool" data-add="time">${mi('schedule')}時間</button></div><div class="side-title">內容元件</div><div class="tool-list"><button class="tool" data-add="heading">${mi('title')}大標題</button><button class="tool" data-add="subheading">${mi('text_fields')}小標題</button><button class="tool" data-add="paragraph">${mi('subject')}內文</button><button class="tool" data-add="image">${mi('image')}圖片</button><button class="tool" data-add="divider">${mi('horizontal_rule')}分隔線</button><button class="tool" data-add="spacer">${mi('height')}留白</button></div><div class="side-title">活動資訊</div><button class="btn soft" style="width:100%" id="activitySettingsBtn">${mi('settings')}活動基本設定</button><div class="help" style="margin-top:10px">設定活動名稱、專屬網址、開放／截止時間、初始名額與公開設定。時間皆以 KST（UTC+9）為基準。</div>`}
 function bindOutline(){document.querySelectorAll('[data-side-tab]').forEach(b=>b.onclick=()=>{editorSideTab=b.dataset.sideTab;renderEditor()});if(editorSideTab!=='outline')return;document.querySelectorAll('[data-outline-id]').forEach(item=>{item.onclick=e=>{if(e.target.closest('.outline-drag'))return;selectedBlockId=item.dataset.outlineId;const target=document.querySelector(`[data-id="${selectedBlockId}"]`);document.querySelectorAll('.outline-item').forEach(x=>x.classList.toggle('active',x===item));document.querySelectorAll('.block').forEach(x=>x.classList.toggle('selected',x.dataset.id===selectedBlockId));if(target)target.scrollIntoView({behavior:'smooth',block:'center'});document.querySelector('#settingsPanel').innerHTML=settingsPanel();bindSettingsPanel()};if(item.draggable){item.addEventListener('dragstart',()=>item.classList.add('dragging'));item.addEventListener('dragend',()=>item.classList.remove('dragging'));item.addEventListener('dragover',e=>e.preventDefault());item.addEventListener('drop',e=>{e.preventDefault();const dragged=document.querySelector('.outline-item.dragging');if(!dragged||dragged===item)return;const from=editorBlocks.findIndex(b=>b.id===dragged.dataset.outlineId),to=editorBlocks.findIndex(b=>b.id===item.dataset.outlineId);const [moved]=editorBlocks.splice(from,1);editorBlocks.splice(to,0,moved);renderEditor();toast('已從大綱調整區塊順序')})}})}
 
@@ -776,7 +1350,7 @@ function bindSettingsPanel(){
   panel.querySelectorAll('[data-list]').forEach(el=>el.addEventListener('input',e=>{const key=e.target.dataset.list, idx=+e.target.dataset.index;block[key][idx]=e.target.value;refreshSelectedBlock(false)}));
   panel.querySelectorAll('[data-add-list]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.addList;block[key]=block[key]||[];block[key].push(key==='rows'?`列 ${block[key].length+1}`:key==='cols'?`選項 ${block[key].length+1}`:`選項 ${block[key].length+1}`);renderSettingsOnly()});
   panel.querySelectorAll('[data-remove-list]').forEach(btn=>btn.onclick=()=>{const key=btn.dataset.removeList, idx=+btn.dataset.index;if((block[key]||[]).length<=1){toast('至少需要保留一個選項');return}block[key].splice(idx,1);renderSettingsOnly()});
-  const choose=panel.querySelector('#chooseImageBtn'), file=panel.querySelector('#imageFileInput'); if(choose&&file){choose.onclick=()=>file.click();file.onchange=e=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{block.dataUrl=reader.result;refreshSelectedBlock();};reader.readAsDataURL(f)}}
+  const choose=panel.querySelector('#chooseImageBtn'), file=panel.querySelector('#imageFileInput'); if(choose&&file){choose.onclick=()=>file.click();file.onchange=e=>{const f=e.target.files?.[0];if(!f)return;compressImageFile(f).then(url=>{block.dataUrl=url;refreshSelectedBlock()}).catch(err=>alert(err&&err.message?err.message:'圖片讀取失敗'))}}
 }
 function renderSettingsOnly(){const p=document.querySelector('#settingsPanel');if(p){p.innerHTML=settingsPanel();bindSettingsPanel()}refreshSelectedBlock(false)}
 function refreshSelectedBlock(rebind=true){const old=document.querySelector(`[data-id="${selectedBlockId}"]`);if(old){old.outerHTML=renderEditorBlock(currentBlock());bindEditorBlocks();} if(rebind)renderSettingsOnly();}
@@ -922,7 +1496,7 @@ function responseRowsHtmlLive(){
   if(!rows.length)return `<tr><td colspan="7"><div class="empty-state">${mi('inbox')}<b>目前沒有符合條件的報名資料</b></div></td></tr>`;
   return rows.map(r=>{
     const display=firstResponseAnswer(r);
-    return `<tr data-response-row="${r.responseId}" tabindex="0" role="button" style="cursor:pointer">
+    return `<tr data-response-row="${esc(r.responseId)}" tabindex="0" role="button" style="cursor:pointer">
       <td><b>${esc(r.registrationNumber)}</b></td>
       <td>${esc(r.email)}</td>
       <td>${esc(display)}</td>
@@ -955,7 +1529,7 @@ function resetResponseSearchState(){
   responseSearchText='';
   try{ if('responseSearch' in window && typeof window.responseSearch!=='string'){} }catch(e){}
 }
-function renderResponses(){if(!currentEventId){navigate('dashboard');return}app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><button class="btn small" data-nav="dashboard">${mi('arrow_back')} 活動列表</button><h1 id="responseEventTitle" style="margin-top:18px">報名資料</h1><div class="muted">報名資料管理 · KST</div></div><div class="actions"><button class="btn" id="openResponsePublicBtn">${mi('open_in_new')} 開啟表單頁面</button><button class="btn" id="editPublishedFormBtn">編輯表單</button></div></div><div class="response-top compact"><div class="card metric"><div class="muted small">目前名額</div><div class="num" id="statCapacity">—</div><div class="tiny muted">目前報名 / 設定總名額</div></div><div class="card metric"><div class="muted small">已確認入金</div><div class="num" id="statPaid">—</div></div><div class="card metric"><div class="muted small">尚未入金</div><div class="num" id="statUnpaid">—</div></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="responseSearch" placeholder="搜尋 Email、姓名或回答內容"></div><div class="filter-row"><select id="paymentFilter"><option value="all">全部入金狀態</option><option>未確認</option><option>已確認</option><option>已退款</option></select><select id="statusFilter"><option value="all">全部報名狀態</option><option>有效</option><option>取消</option><option>作廢</option></select></div></div><div class="card table-card"><table class="table"><thead><tr><th>編號</th><th>Email</th><th>第一回答</th><th>報名時間（KST）</th><th>入金</th><th>狀態</th><th>備註</th></tr></thead><tbody id="responseRows"></tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#responseSearch').oninput=e=>{responseSearchText=e.target.value;refreshResponseRowsLive()};document.querySelector('#paymentFilter').onchange=e=>{responsePaymentFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#statusFilter').onchange=e=>{responseStatusFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#editPublishedFormBtn').onclick=()=>loadEventForEditor(currentEventId);document.querySelector('#openResponsePublicBtn').onclick=()=>{const ev=demoEvents.find(x=>x.id===currentEventId);if(ev?.slug)window.open(PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(ev.slug),'_blank')};loadResponsesLive()}
+function renderResponses(){if(!currentEventId){navigate('dashboard');return}app.innerHTML=`${topbar()}<main class="page"><div class="page-head"><div><button class="btn small" data-nav="dashboard">${mi('arrow_back')} 活動列表</button><h1 id="responseEventTitle" style="margin-top:18px">報名資料</h1><div class="muted">報名資料管理 · KST</div></div><div class="actions"><button class="btn" id="openResponsePublicBtn">${mi('open_in_new')} 開啟表單頁面</button><button class="btn" id="editPublishedFormBtn">編輯表單</button></div></div><div class="response-top compact"><div class="card metric"><div class="muted small">目前名額</div><div class="num" id="statCapacity">—</div><div class="tiny muted">目前報名 / 設定總名額</div></div><div class="card metric"><div class="muted small">已確認入金</div><div class="num" id="statPaid">—</div></div><div class="card metric"><div class="muted small">尚未入金</div><div class="num" id="statUnpaid">—</div></div></div><div class="toolbar"><div class="search material-search">${mi('search')}<input id="responseSearch" placeholder="搜尋 Email、姓名或回答內容"></div><div class="filter-row"><select id="paymentFilter"><option value="all">全部入金狀態</option><option value="未確認">未確認</option><option value="已確認">已確認</option><option value="已退款">已退款</option></select><select id="statusFilter"><option value="all">全部報名狀態</option><option value="有效">有效</option><option value="取消">取消</option><option value="作廢">作廢</option></select></div></div><div class="card table-card"><table class="table"><thead><tr><th>編號</th><th>Email</th><th>第一回答</th><th>報名時間（KST）</th><th>入金</th><th>狀態</th><th>備註</th></tr></thead><tbody id="responseRows"></tbody></table></div></main>${protoNav()}`;bind();bindTopMenus();document.querySelector('#responseSearch').oninput=e=>{responseSearchText=e.target.value;refreshResponseRowsLive()};document.querySelector('#paymentFilter').onchange=e=>{responsePaymentFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#statusFilter').onchange=e=>{responseStatusFilter=e.target.value;refreshResponseRowsLive()};document.querySelector('#editPublishedFormBtn').onclick=()=>loadEventForEditor(currentEventId);document.querySelector('#openResponsePublicBtn').onclick=()=>{const ev=demoEvents.find(x=>x.id===currentEventId);if(ev?.slug)window.open(PUBLIC_EVENT_BASE+'?event='+encodeURIComponent(ev.slug),'_blank')};loadResponsesLive()}
 function openResponseDrawerLive(responseId){
   const r=liveResponses.find(x=>String(x.responseId)===String(responseId));
   if(!r){
@@ -964,7 +1538,7 @@ function openResponseDrawerLive(responseId){
   }
   const answers=orderedAnswerEntries(r).map(item=>
     `<div class="data-pair"><b>${esc(item.label)}</b><span>${esc(prettyAnswer(item.value))}</span></div>`
-  ).join('');document.body.insertAdjacentHTML('beforeend',`<div class="drawer-backdrop" id="drawerBg"></div><aside class="drawer" id="drawer"><div class="drawer-head"><div><b style="font-size:20px">${esc(r.registrationNumber)} · ${esc(r.email)}</b><div class="tiny muted">${esc(r.submittedAt)} KST</div></div><button class="btn icon close" id="drawerClose">${mi('close')}</button></div><div class="section-label">報名者提交資料</div>${answers}<div class="section-label">管理資料</div><div class="field"><label>入金狀態</label><select id="drawerPayment"><option ${r.paymentStatus==='未確認'?'selected':''}>未確認</option><option ${r.paymentStatus==='已確認'?'selected':''}>已確認</option><option ${r.paymentStatus==='已退款'?'selected':''}>已退款</option></select></div><div class="field"><label>報名狀態</label><select id="drawerStatus"><option ${r.registrationStatus==='有效'?'selected':''}>有效</option><option ${r.registrationStatus==='取消'?'selected':''}>取消</option><option ${r.registrationStatus==='作廢'?'selected':''}>作廢</option></select></div><div class="field"><label>管理員備註</label><textarea class="notearea" id="drawerNote">${esc(r.adminNote||'')}</textarea></div><button class="btn primary" style="width:100%;margin-top:12px" id="drawerSave">儲存變更</button><button class="btn danger" style="width:100%;margin-top:16px" id="reuseEmailBtn" ${r.allowEmailReuse?'disabled':''}>${r.allowEmailReuse?'已允許此 Email 再次報名':'允許此 Email 再次報名'}</button></aside>`);const close=()=>{document.querySelector('#drawerBg')?.remove();document.querySelector('#drawer')?.remove()};document.querySelector('#drawerClose').onclick=close;document.querySelector('#drawerBg').onclick=close;document.querySelector('#drawerSave').onclick=async()=>{
+  ).join('');document.body.insertAdjacentHTML('beforeend',`<div class="drawer-backdrop" id="drawerBg"></div><aside class="drawer" id="drawer"><div class="drawer-head"><div><b style="font-size:20px">${esc(r.registrationNumber)} · ${esc(r.email)}</b><div class="tiny muted">${esc(r.submittedAt)} KST</div></div><button class="btn icon close" id="drawerClose">${mi('close')}</button></div><div class="section-label">報名者提交資料</div>${answers}<div class="section-label">管理資料</div><div class="field"><label>入金狀態</label><select id="drawerPayment"><option value="未確認" ${r.paymentStatus==='未確認'?'selected':''}>未確認</option><option value="已確認" ${r.paymentStatus==='已確認'?'selected':''}>已確認</option><option value="已退款" ${r.paymentStatus==='已退款'?'selected':''}>已退款</option></select></div><div class="field"><label>報名狀態</label><select id="drawerStatus"><option value="有效" ${r.registrationStatus==='有效'?'selected':''}>有效</option><option value="取消" ${r.registrationStatus==='取消'?'selected':''}>取消</option><option value="作廢" ${r.registrationStatus==='作廢'?'selected':''}>作廢</option></select></div><div class="field"><label>管理員備註</label><textarea class="notearea" id="drawerNote">${esc(r.adminNote||'')}</textarea></div><button class="btn primary" style="width:100%;margin-top:12px" id="drawerSave">儲存變更</button><button class="btn danger" style="width:100%;margin-top:16px" id="reuseEmailBtn" ${r.allowEmailReuse?'disabled':''}>${r.allowEmailReuse?'已允許此 Email 再次報名':'允許此 Email 再次報名'}</button></aside>`);const close=()=>{document.querySelector('#drawerBg')?.remove();document.querySelector('#drawer')?.remove()};document.querySelector('#drawerClose').onclick=close;document.querySelector('#drawerBg').onclick=close;document.querySelector('#drawerSave').onclick=async()=>{
       const btn=document.querySelector('#drawerSave');
       try{
         btn.disabled=true;
@@ -1008,7 +1582,7 @@ async function loadPublicEventBySlug(slug){
   try{
     const data=await apiGet('getPublicEvent',{slug});
     const detail=data&&data.event;
-    if(!detail||!detail.event)throw new Error('活動資料格式不完整');
+    if(!detail||!detail.event)throw new Error(PT('badFormat'));
 
     currentEventId=detail.event.eventId;
     activityConfig={
@@ -1027,11 +1601,11 @@ async function loadPublicEventBySlug(slug){
     if(detail.state==='full')return renderStatus('full');
     if(detail.state==='closed')return renderStatus('closed');
     if(detail.state==='paused')return renderStatus('paused');
-    if(detail.state!=='open')throw new Error('活動目前無法開啟');
+    if(detail.state!=='open')throw new Error(PT('notOpen'));
 
     renderPublic();
   }catch(err){
-    app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('error')}</div><h2>無法開啟表單</h2><p>${esc(err.message||'讀取失敗')}</p><button class="btn primary" onclick="location.reload()">重新讀取</button></div></section></div>`;
+    app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('error')}</div><h2>${esc(PT('cannotOpenForm'))}</h2><p>${esc(err.message||PT('readFail'))}</p><button class="btn primary" onclick="location.reload()">${esc(PT('reload'))}</button></div></section></div>`;
   }
 }
 function publicAnswerName(id){return 'ans_'+String(id).replace(/[^A-Za-z0-9_-]/g,'_')}
@@ -1070,11 +1644,11 @@ function validatePublicAnswers(answers){
   for(const b of editorBlocks){
     if(!['email','short','long','radio','checkbox','select','grid','date','time'].includes(b.type))continue;
     const v=answers[b.id];
-    if(b.type==='email'&&!String(v||'').trim())return 'Email 為必填';
+    if(b.type==='email'&&!String(v||'').trim())return PT('emailRequired');
     if(!b.required)continue;
-    if(b.type==='checkbox'&&(!Array.isArray(v)||!v.length))return '請完成必填欄位：'+(b.title||'複選');
-    if(b.type==='grid'&&(b.rows||[]).some(r=>!v?.[r]))return '請完成必填欄位：'+(b.title||'單選表格');
-    if(!['checkbox','grid'].includes(b.type)&&!String(v||'').trim())return '請完成必填欄位：'+(b.title||b.type);
+    if(b.type==='checkbox'&&(!Array.isArray(v)||!v.length))return PT('required',{title:b.title||b.type});
+    if(b.type==='grid'&&(b.rows||[]).some(r=>!v?.[r]))return PT('required',{title:b.title||b.type});
+    if(!['checkbox','grid'].includes(b.type)&&!String(v||'').trim())return PT('required',{title:b.title||b.type});
   }
   return '';
 }
@@ -1083,7 +1657,7 @@ async function submitPublicRegistration(){
   const err=validatePublicAnswers(answers);
   if(err){alert(err);return}
   const btn=document.querySelector('#submitBtn');
-  if(btn){btn.disabled=true;btn.textContent='送出中...'}
+  if(btn){btn.disabled=true;btn.textContent=PT('sending')}
   try{
     const result=await apiPost('submitRegistration',{slug:currentPublicSlug||activityConfig.slug,answers});
     const summary=(editorBlocks||[])
@@ -1100,30 +1674,40 @@ async function submitPublicRegistration(){
     };
     renderSuccess();
   }catch(err){
-    const map={NOT_STARTED:'報名尚未開始。',PAUSED:'目前暫停接受報名。',CLOSED:'報名已截止。',FULL:'名額已額滿。',DUPLICATE_EMAIL:'這個 Email 已經有報名紀錄。若你剛剛才送出，可能其實已經報名成功。'};
-    alert(map[err.message]||('送出失敗：'+err.message));
+    const map={NOT_STARTED:PT('errNotStarted'),PAUSED:PT('errPaused'),CLOSED:PT('errClosed'),FULL:PT('errFull'),DUPLICATE_EMAIL:PT('errDuplicate')};
+    alert(map[err.message]||(PT('submitFailed')+err.message));
     if(btn){btn.disabled=false;btn.textContent=i18n[currentLang].submit}
   }
 }
 
 function publicHeader(){const exit=previewFromEditor?`<button class="btn preview-exit" id="exitPreview">${mi('close')} ${i18n[currentLang].endPreview}</button>`:'';return `<div class="public-top">${exit}<select class="lang" id="langSelect"><option value="ko">한국어</option><option value="en">English</option><option value="zh">中文</option><option value="ja">日本語</option></select></div>`}
-function langOptSelected(renderFn=renderPublic){setTimeout(()=>{const sel=document.querySelector('#langSelect');if(sel){sel.value=currentLang;sel.onchange=()=>{currentLang=sel.value;localStorage.setItem('eson_public_lang_manual',currentLang);renderFn();}}const exit=document.querySelector('#exitPreview');if(exit)exit.onclick=()=>{previewFromEditor=false;renderEditor()}},0)}
+function langOptSelected(renderFn=renderPublic){setTimeout(()=>{syncHtmlLang();const sel=document.querySelector('#langSelect');if(sel){sel.value=currentLang;sel.onchange=()=>{const snap=snapshotPublicForm();currentLang=sel.value;localStorage.setItem('eson_public_lang_manual',currentLang);renderFn();restorePublicForm(snap);syncHtmlLang();}}const exit=document.querySelector('#exitPreview');if(exit)exit.onclick=()=>{previewFromEditor=false;renderEditor()}},0)}
+function publicEmailHint(b){
+  const d=String(b.desc||'').trim();
+  const defaults=['','系統固定欄位・每個 Email 僅能報名一次','每個 Email 僅能報名一次'];
+  return defaults.includes(d)?PT('emailHint'):d;
+}
+function publicPlaceholder(b,fallbackKey){
+  const p=String(b.placeholder||'').trim();
+  const defaults=['','請輸入內容','請選擇'];
+  return defaults.includes(p)?PT(fallbackKey):p;
+}
 function publicBlockHtml(b){
  const name=publicAnswerName(b.id);
  const required=b.required?' required':'';
- if(b.type==='email')return `<div class="public-field"><label>${esc(b.title||'Email')} <span class="req">*</span></label><input name="${name}" type="email" placeholder="example@email.com" required><div class="help">${esc(b.desc||'每個 Email 僅能報名一次')}</div></div>`;
+ if(b.type==='email')return `<div class="public-field"><label>${esc(b.title||'Email')} <span class="req">*</span></label><input name="${name}" type="email" placeholder="example@email.com" required><div class="help">${esc(publicEmailHint(b))}</div></div>`;
  if(b.type==='heading')return `<div class="event-title ${b.align==='center'?'align-center':''}" style="font-size:26px">${esc(b.title||'大標題')}</div>`;
  if(b.type==='subheading')return `<h3 class="${b.align==='center'?'align-center':''}">${esc(b.title||'小標題')}</h3>`;
  if(b.type==='paragraph')return `<div class="event-desc ${b.align==='center'?'align-center':''}">${esc(b.text||'')}</div>`;
- if(b.type==='short')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><input name="${name}" placeholder="${esc(b.placeholder||'')}"${required}>${b.desc?`<div class="help">${esc(b.desc)}</div>`:''}</div>`;
- if(b.type==='long')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><textarea name="${name}" class="long-${b.height||'medium'}" placeholder="${esc(b.placeholder||'')}"${required}></textarea>${b.desc?`<div class="help">${esc(b.desc)}</div>`:''}</div>`;
- if(b.type==='radio')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label>${(b.options||[]).map(o=>`<label class="choice"><input type="radio" name="${name}" value="${esc(o)}"> ${esc(o)}</label>`).join('')}${b.other?`<label class="choice"><input type="radio" name="${name}" value="__other__"> 其他</label><input data-other-for="${b.id}" placeholder="其他內容">`:''}</div>`;
- if(b.type==='checkbox')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label>${(b.options||[]).map(o=>`<label class="choice"><input type="checkbox" name="${name}" value="${esc(o)}"> ${esc(o)}</label>`).join('')}${b.other?`<div class="choice">其他</div><input data-other-for="${b.id}" placeholder="其他內容">`:''}</div>`;
- if(b.type==='select')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><select name="${name}"${required}><option value="">${esc(b.placeholder||'請選擇')}</option>${(b.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select></div>`;
+ if(b.type==='short')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><input name="${name}" placeholder="${esc(publicPlaceholder(b,'inputPh'))}"${required}>${b.desc?`<div class="help">${esc(b.desc)}</div>`:''}</div>`;
+ if(b.type==='long')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><textarea name="${name}" class="long-${b.height||'medium'}" placeholder="${esc(publicPlaceholder(b,'inputPh'))}"${required}></textarea>${b.desc?`<div class="help">${esc(b.desc)}</div>`:''}</div>`;
+ if(b.type==='radio')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label>${(b.options||[]).map(o=>`<label class="choice"><input type="radio" name="${name}" value="${esc(o)}"> ${esc(o)}</label>`).join('')}${b.other?`<label class="choice"><input type="radio" name="${name}" value="__other__"> ${esc(PT('other'))}</label><input data-other-for="${esc(b.id)}" placeholder="${esc(PT('otherPh'))}">`:''}</div>`;
+ if(b.type==='checkbox')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label>${(b.options||[]).map(o=>`<label class="choice"><input type="checkbox" name="${name}" value="${esc(o)}"> ${esc(o)}</label>`).join('')}${b.other?`<div class="choice">${esc(PT('other'))}</div><input data-other-for="${esc(b.id)}" placeholder="${esc(PT('otherPh'))}">`:''}</div>`;
+ if(b.type==='select')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><select name="${name}"${required}><option value="">${esc(publicPlaceholder(b,'choose'))}</option>${(b.options||[]).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select></div>`;
  if(b.type==='grid'){const rows=b.rows||[],cols=b.cols||[];return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><div class="grid-preview" style="grid-template-columns:1.4fr repeat(${cols.length},1fr)"><span></span>${cols.map(c=>`<b>${esc(c)}</b>`).join('')}${rows.map((r,i)=>`<span>${esc(r)}</span>${cols.map(c=>`<label><input type="radio" name="${name}_${i}" value="${esc(c)}"></label>`).join('')}`).join('')}</div></div>`;}
  if(b.type==='date')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><input name="${name}" type="date"${required}>${b.desc?`<div class="help">${esc(b.desc)}</div>`:''}</div>`;
  if(b.type==='time')return `<div class="public-field"><label>${esc(b.title)}${req(b)}</label><input name="${name}" type="time"${required}>${b.desc?`<div class="help">${esc(b.desc)}</div>`:''}</div>`;
- if(b.type==='image')return b.dataUrl?`<div class="image-preview-block size-${b.size||'large'}"><img src="${b.dataUrl}" alt="${esc(b.alt||'')}"></div>`:`<div class="image-placeholder">${mi('image')}<span>圖片區塊</span></div>`;
+ if(b.type==='image')return b.dataUrl?`<div class="image-preview-block size-${b.size||'large'}"><img src="${esc(b.dataUrl)}" alt="${esc(b.alt||'')}"></div>`:`<div class="image-placeholder">${mi('image')}<span>${esc(PT('imageBlock'))}</span></div>`;
  if(b.type==='divider')return '<div class="divider" style="margin:18px 0"></div>';
  if(b.type==='spacer')return `<div style="height:${b.height==='small'?16:b.height==='large'?54:30}px"></div>`;
  return '';
@@ -1159,9 +1743,56 @@ function renderStatus(type){
   app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi(s.icon)}</div><h2>${esc(s.title)}</h2><p class="muted">${esc(s.desc)}</p></div></section></div>`;
   langOptSelected(()=>renderStatus(type));
 }
-function showMyAccount(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="accountModal"><div class="modal"><div class="modal-title-row"><h3>我的帳號</h3><button class="btn icon" id="accountClose">${mi('close')}</button></div><div class="data-pair"><b>帳號</b>Jiin</div><div class="data-pair"><b>權限</b>Owner</div><div class="field"><label>目前密碼</label><input type="password" placeholder="輸入目前密碼"></div><div class="field"><label>新密碼</label><input type="password" placeholder="輸入新密碼"></div><div class="field"><label>再次輸入新密碼</label><input type="password" placeholder="再次輸入新密碼"></div><div class="modal-actions"><button class="btn primary" id="changePassword">修改密碼</button></div></div></div>`);const close=()=>document.querySelector('#accountModal')?.remove();document.querySelector('#accountClose').onclick=close;document.querySelector('#changePassword').onclick=()=>{close();toast('密碼修改流程示意（正式版接 Firebase Auth）')};}
-function showAdminManage(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="adminModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>管理員管理</h3><p>只有 Owner 可以看到此功能。</p></div><button class="btn icon" id="adminClose">${mi('close')}</button></div><div class="admin-user-card"><div><b>Jiin</b><div class="tiny muted">Owner · 目前登入帳號</div></div><span class="badge open">Owner</span></div><div class="admin-user-card"><div><b>ESON</b><div class="tiny muted">Admin · 可修改自己的密碼</div></div><button class="btn" id="resetEsonPassword">${mi('lock_reset')}重置 ESON 密碼</button></div></div></div>`);const close=()=>document.querySelector('#adminModal')?.remove();document.querySelector('#adminClose').onclick=close;document.querySelector('#resetEsonPassword').onclick=()=>{close();showResetPassword()};}
-function showResetPassword(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="resetModal"><div class="modal"><h3>重置 ESON 密碼</h3><p>你無法查看 ESON 目前的密碼。重置後原密碼將立即失效。</p><div class="field"><label>新的臨時密碼</label><input type="password"></div><div class="field"><label>再次輸入</label><input type="password"></div><div class="modal-actions"><button class="btn" id="resetCancel">取消</button><button class="btn primary" id="resetConfirm">確認重置</button></div></div></div>`);const close=()=>document.querySelector('#resetModal')?.remove();document.querySelector('#resetCancel').onclick=close;document.querySelector('#resetConfirm').onclick=()=>{close();toast('已重置 ESON 密碼')};}
+function showMyAccount(){
+  const user=window.EsonFirebase.currentUser();
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="accountModal"><div class="modal"><div class="modal-title-row"><h3>我的帳號</h3><button class="btn icon" id="accountClose">${mi('close')}</button></div><div class="data-pair"><b>帳號</b><span>${esc(currentAdminName())}</span></div><div class="data-pair"><b>Email</b><span>${esc(user?.email||'')}</span></div><div class="data-pair"><b>權限</b><span>${esc(currentAdminRole())}</span></div><div class="field"><label>目前密碼</label><input type="password" id="pwCurrent" autocomplete="current-password" placeholder="輸入目前密碼"></div><div class="field"><label>新密碼</label><input type="password" id="pwNew" autocomplete="new-password" placeholder="輸入新密碼"></div><div class="field"><label>再次輸入新密碼</label><input type="password" id="pwNew2" autocomplete="new-password" placeholder="再次輸入新密碼"></div><div class="modal-actions"><button class="btn primary" id="changePassword">修改密碼</button></div></div></div>`);
+  const close=()=>document.querySelector('#accountModal')?.remove();
+  document.querySelector('#accountClose').onclick=close;
+  const btn=document.querySelector('#changePassword');
+  btn.onclick=async()=>{
+    const cur=document.querySelector('#pwCurrent').value;
+    const n1=document.querySelector('#pwNew').value;
+    const n2=document.querySelector('#pwNew2').value;
+    if(!cur||!n1||!n2){alert('請填寫所有欄位');return}
+    if(n1.length<8){alert('新密碼至少需要 8 個字元');return}
+    if(n1!==n2){alert('兩次輸入的新密碼不一致');return}
+    btn.disabled=true;
+    try{
+      const u=firebase.auth().currentUser;
+      await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,cur));
+      await u.updatePassword(n1);
+      close();toast('密碼已更新');
+    }catch(err){
+      const code=String(err&&err.code||'');
+      if(/wrong-password|invalid-credential|invalid-login/.test(code))alert('目前密碼不正確');
+      else alert('修改失敗：'+(err&&err.message||code));
+    }finally{btn.disabled=false}
+  };
+}
+async function showAdminManage(){
+  if(currentAdminProfile?.role!=='owner')return;
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="adminModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>管理員管理</h3><p>只有 Owner 可以看到此功能。</p></div><button class="btn icon" id="adminClose">${mi('close')}</button></div><div id="adminList"><div class="muted small" style="padding:14px 0">正在讀取資料...</div></div><div class="field" style="margin-top:18px"><label>管理員 Email</label><div style="display:flex;gap:8px"><input id="resetEmailInput" type="email" placeholder="name@example.com"><button class="btn primary" id="resetEmailSend">寄送重設信</button></div><div class="help">重設信會寄到該管理員的 Email，由對方自行設定新密碼。任何人都無法查看他人的密碼。</div></div></div></div>`);
+  const close=()=>document.querySelector('#adminModal')?.remove();
+  document.querySelector('#adminClose').onclick=close;
+  const sendReset=async email=>{
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email||'')){alert('請輸入有效的 Email');return}
+    try{await firebase.auth().sendPasswordResetEmail(email);toast('密碼重設信已寄出')}
+    catch(err){alert('寄送失敗：'+(err&&err.message||err))}
+  };
+  const me=window.EsonFirebase.currentUser();
+  let rows=[{name:currentAdminName(),role:currentAdminRole(),email:me?.email||'',self:true}];
+  try{
+    const snap=await firebase.firestore().collection('admins').get();
+    const list=[];
+    snap.forEach(d=>{const x=d.data()||{};list.push({name:x.name||x.email||d.id,role:x.role==='owner'?'Owner':'Admin',email:x.email||'',self:d.id===me?.uid})});
+    if(list.length)rows=list;
+  }catch(e){/* rules may not allow listing admins: keep showing the signed-in account only */}
+  const el=document.querySelector('#adminList');
+  if(!el)return;
+  el.innerHTML=rows.map(r=>`<div class="admin-user-card"><div><b>${esc(r.name)}</b> ${r.self?'<span class="badge open">目前登入帳號</span>':''}<div class="tiny muted">${esc(r.role)}${r.email?' · '+esc(r.email):''}</div></div>${r.email?`<button class="btn" data-reset-email="${esc(r.email)}">${mi('lock_reset')}寄送密碼重設信</button>`:''}</div>`).join('');
+  el.querySelectorAll('[data-reset-email]').forEach(b=>b.onclick=()=>sendReset(b.dataset.resetEmail));
+  document.querySelector('#resetEmailSend').onclick=()=>sendReset(document.querySelector('#resetEmailInput').value.trim());
+}
 
 function showSavingNotice(text='正在儲存中…'){
   document.querySelector('.saving-notice')?.remove();
@@ -1194,6 +1825,7 @@ async function renderRoute(){
   const publicSlug=new URLSearchParams(location.search).get('event');
   if(!IS_ADMIN_PATH){
     await initPublicLanguage();
+    syncHtmlLang();
     if(publicSlug)await loadPublicEventBySlug(publicSlug);
     else await renderPublicHome();
     return;
@@ -1212,6 +1844,7 @@ async function renderRoute(){
   }
 
   if(user)await ensureAdminContext();
+  syncHtmlLang();
 
   if(r==='login'&&user){
     if(location.hash!=='#dashboard')location.hash='dashboard';
