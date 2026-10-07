@@ -322,6 +322,18 @@ const ADMIN_UI_TEXT={
     "目前密碼不正確":"현재 비밀번호가 올바르지 않습니다",
     "只有 Owner 可以看到此功能。":"Owner만 이 기능을 볼 수 있습니다.",
     "目前登入帳號":"현재 로그인 계정",
+    "新的臨時密碼":"새 임시 비밀번호",
+    "再次輸入":"다시 입력",
+    "至少 8 碼":"8자 이상",
+    "確認重置":"재설정 확인",
+    "密碼至少需要 8 碼":"비밀번호는 8자 이상이어야 합니다",
+    "兩次輸入的密碼不一致":"입력한 비밀번호가 일치하지 않습니다",
+    "只有 Owner 可以重置密碼":"Owner만 비밀번호를 재설정할 수 있습니다",
+    "找不到此管理員":"해당 관리자를 찾을 수 없습니다",
+    "無法重置此帳號":"이 계정은 재설정할 수 없습니다",
+    "請重新登入後再試":"다시 로그인한 후 시도해 주세요",
+    "尚未部署重置密碼的 Cloud Function（resetAdminPassword），請先部署後再試":"비밀번호 재설정 Cloud Function(resetAdminPassword)이 배포되지 않았습니다. 먼저 배포한 후 다시 시도해 주세요",
+    "重置失敗：":"재설정 실패: ",
     "寄送密碼重設信":"비밀번호 재설정 메일 보내기",
     "密碼重設信已寄出":"비밀번호 재설정 메일을 보냈습니다",
     "管理員 Email":"관리자 이메일",
@@ -584,6 +596,18 @@ const ADMIN_UI_TEXT={
     "目前密碼不正確":"Current password is incorrect",
     "只有 Owner 可以看到此功能。":"Only Owners can see this feature.",
     "目前登入帳號":"Currently signed in",
+    "新的臨時密碼":"New temporary password",
+    "再次輸入":"Re-enter password",
+    "至少 8 碼":"At least 8 characters",
+    "確認重置":"Confirm Reset",
+    "密碼至少需要 8 碼":"Password must be at least 8 characters",
+    "兩次輸入的密碼不一致":"The two passwords do not match",
+    "只有 Owner 可以重置密碼":"Only the Owner can reset passwords",
+    "找不到此管理員":"Admin not found",
+    "無法重置此帳號":"This account cannot be reset",
+    "請重新登入後再試":"Please sign in again and retry",
+    "尚未部署重置密碼的 Cloud Function（resetAdminPassword），請先部署後再試":"The reset-password Cloud Function (resetAdminPassword) is not deployed yet. Please deploy it and try again",
+    "重置失敗：":"Reset failed: ",
     "寄送密碼重設信":"Send Password Reset Email",
     "密碼重設信已寄出":"Password reset email sent",
     "管理員 Email":"Admin Email",
@@ -608,6 +632,10 @@ const ADMIN_UI_TEXT={
 const ADMIN_UI_STATUS_VARIANT={en:{'取消':'Cancelled'},ko:{'取消':'취소됨'}};
 // Sentences that contain a variable part. Matched as a whole, then rebuilt in the target language.
 const ADMIN_UI_PATTERNS=[
+  {re:/^重置 ([\s\S]+) 密碼$/,en:m=>`Reset ${m[1]}'s password`,ko:m=>`${m[1]} 비밀번호 재설정`},
+  {re:/^請設定新的臨時密碼，並自行告知 ([\s\S]+)。對方登入後可到「我的帳號」自行更改。$/,en:m=>`Set a new temporary password and let ${m[1]} know. They can change it later under "My Account" after signing in.`,ko:m=>`새 임시 비밀번호를 설정하고 ${m[1]}님께 직접 알려 주세요. 로그인 후 '내 계정'에서 변경할 수 있습니다.`},
+  {re:/^已重置 ([\s\S]+) 密碼$/,en:m=>`Password reset for ${m[1]}`,ko:m=>`${m[1]} 비밀번호를 재설정했습니다`},
+  {re:/^重置失敗：([\s\S]*)$/,en:m=>`Reset failed: ${m[1]}`,ko:m=>`재설정 실패: ${m[1]}`},
   {re:/^請輸入活動名稱「([\s\S]*)」以確認刪除$/,en:m=>`Type the event name "${m[1]}" to confirm deletion`,ko:m=>`확인을 위해 이벤트명 "${m[1]}"을(를) 입력해 주세요`},
   {re:/^活動名稱不一致，請輸入完整活動名稱「([\s\S]*)」$/,en:m=>`The name does not match. Please enter the full event name "${m[1]}"`,ko:m=>`이벤트명이 일치하지 않습니다. 전체 이벤트명 "${m[1]}"을(를) 입력해 주세요`},
   {re:/^已增加\s*(\d+)\s*個名額，總名額為\s*(\d+)$/,en:m=>`Added ${m[1]} spots. New total capacity: ${m[2]}`,ko:m=>`정원 ${m[1]}명이 추가되어 총 정원은 ${m[2]}명입니다`},
@@ -615,7 +643,7 @@ const ADMIN_UI_PATTERNS=[
   {re:/^開啟 (https?:\/\/\S+)$/,en:m=>`Open ${m[1]}`,ko:m=>`${m[1]} 열기`}
 ];
 // Authored content (questions, option text, answers, event names, notes) must never be translated.
-const ADMIN_TR_SKIP='script,style,textarea,input,.q-title,.heading-block,.subheading-block,.paragraph-block,.choice,.form-input,.form-textarea,.form-select,.grid-preview,.outline-label,.event-title,.editor-title,#responseEventTitle,.drawer .data-pair,#eventRows td:first-child b,#responseRows td:nth-child(2),#responseRows td:nth-child(3),#responseRows td:nth-child(7),.option-row,.admin-user-card b';
+const ADMIN_TR_SKIP='.public-shell,#confirmModal,script,style,textarea,input,.q-title,.heading-block,.subheading-block,.paragraph-block,.choice,.form-input,.form-textarea,.form-select,.grid-preview,.outline-label,.event-title,.editor-title,#responseEventTitle,.drawer .data-pair,#eventRows td:first-child b,#responseRows td:nth-child(2),#responseRows td:nth-child(3),#responseRows td:nth-child(7),.option-row,.admin-user-card b';
 // Attributes (placeholder/title) are UI text even on inputs and option rows, so those two selectors are dropped.
 const ADMIN_TR_SKIP_ATTR=ADMIN_TR_SKIP.replace('textarea,input,','').replace('.option-row,','');
 const ADMIN_HAN_RE=/[\u4e00-\u9fff]/;
@@ -742,7 +770,7 @@ function PT(k,vars){
 }
 function syncHtmlLang(){
   const m={zh:'zh-Hant',ko:'ko',en:'en',ja:'ja'};
-  document.documentElement.lang=m[IS_ADMIN_PATH?adminUiLang:currentLang]||'en';
+  document.documentElement.lang=m[(IS_ADMIN_PATH&&!previewFromEditor)?adminUiLang:currentLang]||'en';
 }
 function snapshotPublicForm(){
   const out=[];
@@ -1278,7 +1306,7 @@ function descHtml(b){return b.desc?`<div class="block-desc">${esc(b.desc)}</div>
 function renderEditorBlock(b){
   const drag=b.locked?`<div class="locked-handle" title="Email 為固定第一欄，無法移動">${mi('lock')}</div>`:`<div class="drag-handle" title="拖曳調整順序" draggable="true">${mi('drag_indicator')}<span>拖曳排序</span></div>`;
   let body='';
-  if(b.type==='email')body=`<div class="q-title">${esc(b.title||'Email')} <span class="req">*</span></div><div class="form-input">example@email.com</div><div class="email-lock">${mi('lock')} ${esc(b.desc||'系統固定欄位・每個 Email 僅能報名一次')}</div>`;
+  if(b.type==='email')body=`<div class="q-title">${esc(b.title||'Email')} <span class="req">*</span></div><div class="form-input">example@email.com</div><div class="email-lock">${mi('lock')} 系統固定欄位・每個 Email 僅能報名一次</div>`;
   if(b.type==='heading')body=`<div class="heading-block ${b.align==='center'?'align-center':''}">${esc(b.title||'大標題')}</div>`;
   if(b.type==='subheading')body=`<div class="subheading-block ${b.align==='center'?'align-center':''}">${esc(b.title||'小標題')}</div>`;
   if(b.type==='short')body=`<div class="q-title">${esc(b.title||'簡答')}${req(b)}</div>${descHtml(b)}<div class="form-input">${esc(b.placeholder||'請輸入內容')}</div>`;
@@ -1306,7 +1334,7 @@ function settingsPanel(block=currentBlock()){
   const title=block.type==='email'?'系統 Email 欄位':({short:'簡答設定',long:'詳答設定',radio:'單選設定',checkbox:'複選設定',select:'下拉選單設定',grid:'單選表格設定',date:'日期設定',time:'時間設定',heading:'大標題設定',subheading:'小標題設定',paragraph:'內文設定',image:'圖片設定',divider:'分隔線',spacer:'留白設定'})[block.type];
   let h=`<div class="settings-title">${title}</div>`;
   const textField=(label,key,value,textarea=false)=>`<div class="field"><label>${label}</label>${textarea?`<textarea data-prop="${key}" placeholder="選填">${esc(value||'')}</textarea>`:`<input data-prop="${key}" value="${esc(value||'')}">`}</div>`;
-  if(block.type==='email') return h+textField('顯示名稱','title',block.title)+textField('說明文字','desc',block.desc,true)+toggleRow('必填','required',true,true,'此設定無法更改')+toggleRow('重複報名判定','dedupe',true,true,'系統固定用途');
+  if(block.type==='email') return h+`<div class="info-note">${mi('lock')}<span>系統固定欄位・每個 Email 僅能報名一次</span></div>`+toggleRow('必填','required',true,true,'此設定無法更改')+toggleRow('重複報名判定','dedupe',true,true,'系統固定用途');
   if(['short','long','radio','checkbox','select','grid','date','time'].includes(block.type))h+=textField('題目','title',block.title)+textField('說明文字','desc',block.desc,true);
   if(['short','long'].includes(block.type))h+=textField('Placeholder','placeholder',block.placeholder);
   if(block.type==='long')h+=`<div class="field"><label>輸入框初始高度</label><select data-prop="height"><option value="small" ${block.height==='small'?'selected':''}>小</option><option value="medium" ${(!block.height||block.height==='medium')?'selected':''}>中</option><option value="large" ${block.height==='large'?'selected':''}>大</option></select></div>`;
@@ -1335,7 +1363,7 @@ function bindEditor(){
   bindOutline();
   if(editorPage==='form'){bindEditorBlocks();bindSettingsPanel();}
   else document.querySelector('#successNoteInput')?.addEventListener('input',e=>{successNote=e.target.value;const p=document.querySelector('.editable-success-note .paragraph-block');if(p)p.textContent=successNote});
-  document.querySelector('#previewBtn').onclick=()=>{previewFromEditor=true;editorPage==='success'?renderSuccess():renderPublic()};
+  document.querySelector('#previewBtn').onclick=()=>{previewFromEditor=true;currentLang=({zh:'zh',ko:'ko',en:'en'})[adminUiLang]||'en';renderPublic()};
   document.querySelector('#activitySettingsBtn').onclick=showActivitySettings;
   document.querySelectorAll('[data-editor-page]').forEach(b=>b.onclick=()=>{editorPage=b.dataset.editorPage;renderEditor()});
   document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(editorPage!=='form'){toast('請先切換到「報名表單」再新增元件');return}addBlock(b.dataset.add)});
@@ -1681,11 +1709,9 @@ async function submitPublicRegistration(){
 }
 
 function publicHeader(){const exit=previewFromEditor?`<button class="btn preview-exit" id="exitPreview">${mi('close')} ${i18n[currentLang].endPreview}</button>`:'';return `<div class="public-top">${exit}<select class="lang" id="langSelect"><option value="ko">한국어</option><option value="en">English</option><option value="zh">中文</option><option value="ja">日本語</option></select></div>`}
-function langOptSelected(renderFn=renderPublic){setTimeout(()=>{syncHtmlLang();const sel=document.querySelector('#langSelect');if(sel){sel.value=currentLang;sel.onchange=()=>{const snap=snapshotPublicForm();currentLang=sel.value;localStorage.setItem('eson_public_lang_manual',currentLang);renderFn();restorePublicForm(snap);syncHtmlLang();}}const exit=document.querySelector('#exitPreview');if(exit)exit.onclick=()=>{previewFromEditor=false;renderEditor()}},0)}
+function langOptSelected(renderFn=renderPublic){setTimeout(()=>{syncHtmlLang();const sel=document.querySelector('#langSelect');if(sel){sel.value=currentLang;sel.onchange=()=>{const snap=snapshotPublicForm();currentLang=sel.value;if(!previewFromEditor)localStorage.setItem('eson_public_lang_manual',currentLang);renderFn();restorePublicForm(snap);syncHtmlLang();}}const exit=document.querySelector('#exitPreview');if(exit)exit.onclick=()=>{previewFromEditor=false;renderEditor()}},0)}
 function publicEmailHint(b){
-  const d=String(b.desc||'').trim();
-  const defaults=['','系統固定欄位・每個 Email 僅能報名一次','每個 Email 僅能報名一次'];
-  return defaults.includes(d)?PT('emailHint'):d;
+  return PT('emailHint');
 }
 function publicPlaceholder(b,fallbackKey){
   const p=String(b.placeholder||'').trim();
@@ -1712,7 +1738,7 @@ function publicBlockHtml(b){
  if(b.type==='spacer')return `<div style="height:${b.height==='small'?16:b.height==='large'?54:30}px"></div>`;
  return '';
 }
-function renderPublic(){setDocumentTitle(activityConfig.name||'ESON Events');const t=i18n[currentLang];app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="public-content"><div class="event-title">${esc(activityConfig.name)}</div><div class="info-box"><b>${t.open}</b><br>${t.deadline}: ${activityConfig.end.replace('T',' ')} KST (UTC+9)</div>${editorBlocks.map(publicBlockHtml).join('')}<button class="public-submit" id="submitBtn">${t.submit}</button></div></section></div>${protoNav()}`;bind();langOptSelected();document.querySelector('#submitBtn').onclick=()=>previewFromEditor?toast('預覽模式不會真的送出資料'):showConfirm();}
+function renderPublic(){setDocumentTitle(activityConfig.name||'ESON Events');const t=i18n[currentLang];app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="public-content"><div class="event-title">${esc(activityConfig.name)}</div><div class="info-box"><b>${t.open}</b>${activityConfig.end?`<br>${t.deadline}: ${String(activityConfig.end).replace('T',' ')} KST (UTC+9)`:''}</div>${editorBlocks.map(publicBlockHtml).join('')}<button class="public-submit" id="submitBtn">${t.submit}</button></div></section></div>${protoNav()}`;bind();langOptSelected();document.querySelector('#submitBtn').onclick=()=>previewFromEditor?toast('預覽模式不會真的送出資料'):showConfirm();}
 function showConfirm(){const t=i18n[currentLang];const answers=collectPublicAnswers();const err=validatePublicAnswers(answers);if(err){alert(err);return}document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="confirmModal"><div class="modal"><h3>${t.confirmTitle}</h3><p>${t.confirmText}</p><div class="modal-actions"><button class="btn" id="confirmBack">${t.back}</button><button class="btn primary" id="confirmYes">${t.confirm}</button></div></div></div>`);document.querySelector('#confirmBack').onclick=()=>document.querySelector('#confirmModal').remove();document.querySelector('#confirmYes').onclick=()=>{document.querySelector('#confirmModal').remove();submitPublicRegistration();}}
 function renderSuccess(){setDocumentTitle(activityConfig.name||lastSubmission?.eventName||'ESON Events');const t=i18n[currentLang];const s=lastSubmission;if(!s){app.innerHTML=`<div class="public-shell"><section class="public-form"><div class="public-accent"></div><div class="status-page"><h2>${t.success}</h2></div></section></div>`;return}const rows=(s.summary||[]).map(x=>`<div class="item"><b>${esc(x.label)}</b>${esc(Array.isArray(x.value)?x.value.join('、'):(x.value&&typeof x.value==='object'?Object.entries(x.value).map(([k,v])=>k+': '+v).join(' / '):x.value||''))}</div>`).join('');app.innerHTML=`<div class="public-shell">${publicHeader()}<section class="public-form"><div class="public-accent"></div><div class="status-page"><div class="status-icon">${mi('check_circle')}</div><h2>${t.success}</h2><p>${esc(s.eventName||activityConfig.name)}</p><div class="success-code">${esc(s.registrationNumber)}</div><div class="tiny muted">${t.code}</div><div class="summary"><h3>${t.summary}</h3>${rows}</div>${successNote?`<div class="paragraph-block">${esc(successNote)}</div>`:''}<div class="screenshot-tip"><b>${t.save}</b><br>${t.saveText}</div></div></section></div>`;langOptSelected(renderSuccess);}
 
@@ -1771,27 +1797,44 @@ function showMyAccount(){
 }
 async function showAdminManage(){
   if(currentAdminProfile?.role!=='owner')return;
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="adminModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>管理員管理</h3><p>只有 Owner 可以看到此功能。</p></div><button class="btn icon" id="adminClose">${mi('close')}</button></div><div id="adminList"><div class="muted small" style="padding:14px 0">正在讀取資料...</div></div><div class="field" style="margin-top:18px"><label>管理員 Email</label><div style="display:flex;gap:8px"><input id="resetEmailInput" type="email" placeholder="name@example.com"><button class="btn primary" id="resetEmailSend">寄送重設信</button></div><div class="help">重設信會寄到該管理員的 Email，由對方自行設定新密碼。任何人都無法查看他人的密碼。</div></div></div></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="adminModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>管理員管理</h3><p>只有 Owner 可以看到此功能。</p></div><button class="btn icon" id="adminClose">${mi('close')}</button></div><div id="adminList"><div class="muted small" style="padding:14px 0">正在讀取資料...</div></div></div></div>`);
   const close=()=>document.querySelector('#adminModal')?.remove();
   document.querySelector('#adminClose').onclick=close;
-  const sendReset=async email=>{
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email||'')){alert('請輸入有效的 Email');return}
-    try{await firebase.auth().sendPasswordResetEmail(email);toast('密碼重設信已寄出')}
-    catch(err){alert('寄送失敗：'+(err&&err.message||err))}
-  };
   const me=window.EsonFirebase.currentUser();
-  let rows=[{name:currentAdminName(),role:currentAdminRole(),email:me?.email||'',self:true}];
+  let rows=[{uid:me?.uid||'',name:currentAdminName(),role:currentAdminRole(),email:me?.email||'',self:true}];
   try{
     const snap=await firebase.firestore().collection('admins').get();
     const list=[];
-    snap.forEach(d=>{const x=d.data()||{};list.push({name:x.name||x.email||d.id,role:x.role==='owner'?'Owner':'Admin',email:x.email||'',self:d.id===me?.uid})});
+    snap.forEach(d=>{const x=d.data()||{};list.push({uid:d.id,name:x.name||x.email||d.id,role:x.role==='owner'?'Owner':'Admin',email:x.email||'',self:d.id===me?.uid})});
     if(list.length)rows=list;
-  }catch(e){/* rules may not allow listing admins: keep showing the signed-in account only */}
+  }catch(e){/* rules may not allow listing admins */}
   const el=document.querySelector('#adminList');
   if(!el)return;
-  el.innerHTML=rows.map(r=>`<div class="admin-user-card"><div><b>${esc(r.name)}</b> ${r.self?'<span class="badge open">目前登入帳號</span>':''}<div class="tiny muted">${esc(r.role)}${r.email?' · '+esc(r.email):''}</div></div>${r.email?`<button class="btn" data-reset-email="${esc(r.email)}">${mi('lock_reset')}寄送密碼重設信</button>`:''}</div>`).join('');
-  el.querySelectorAll('[data-reset-email]').forEach(b=>b.onclick=()=>sendReset(b.dataset.resetEmail));
-  document.querySelector('#resetEmailSend').onclick=()=>sendReset(document.querySelector('#resetEmailInput').value.trim());
+  el.innerHTML=rows.map((r,i)=>`<div class="admin-user-card"><div><b>${esc(r.name)}</b> ${r.self?'<span class="badge open">目前登入帳號</span>':''}<div class="tiny muted">${esc(r.role)}${r.email?' · '+esc(r.email):''}</div></div>${r.self?'':`<button class="btn" data-reset-idx="${i}">${mi('lock_reset')}<span>重置 ${esc(r.name)} 密碼</span></button>`}</div>`).join('');
+  el.querySelectorAll('[data-reset-idx]').forEach(b=>b.onclick=()=>showResetPassword(rows[Number(b.dataset.resetIdx)]));
+}
+function showResetPassword(target){
+  document.querySelector('#resetPwModal')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="resetPwModal"><div class="modal"><h3>重置 ${esc(target.name)} 密碼</h3><p>請設定新的臨時密碼，並自行告知 ${esc(target.name)}。對方登入後可到「我的帳號」自行更改。</p><div class="field"><label>新的臨時密碼</label><input id="rpNew" type="password" autocomplete="new-password" placeholder="至少 8 碼"></div><div class="field"><label>再次輸入</label><input id="rpConfirm" type="password" autocomplete="new-password"></div><div class="modal-actions"><button class="btn" id="rpCancel">取消</button><button class="btn primary" id="rpOk">確認重置</button></div></div></div>`);
+  const m=document.querySelector('#resetPwModal');
+  m.querySelector('#rpCancel').onclick=()=>m.remove();
+  m.querySelector('#rpOk').onclick=async()=>{
+    const a=m.querySelector('#rpNew').value,b=m.querySelector('#rpConfirm').value;
+    if(a.length<8){alert('密碼至少需要 8 碼');return}
+    if(a!==b){alert('兩次輸入的密碼不一致');return}
+    const btn=m.querySelector('#rpOk');btn.disabled=true;
+    try{
+      await window.EsonFirebase.apiPost('resetAdminPassword',{uid:target.uid,newPassword:a});
+      m.remove();toast('已重置 '+target.name+' 密碼');
+    }catch(err){
+      btn.disabled=false;
+      const c=String(err&&err.message||err);
+      const map={FORBIDDEN:'只有 Owner 可以重置密碼',WEAK_PASSWORD:'密碼至少需要 8 碼',ADMIN_NOT_FOUND:'找不到此管理員',INVALID_TARGET:'無法重置此帳號',UNAUTHENTICATED:'請重新登入後再試'};
+      if(map[c])alert(map[c]);
+      else if(/not-found|NOT_FOUND|404|Failed to fetch|internal/i.test(c)&&!/ADMIN_NOT_FOUND/.test(c))alert('尚未部署重置密碼的 Cloud Function（resetAdminPassword），請先部署後再試');
+      else alert('重置失敗：'+c);
+    }
+  };
 }
 
 function showSavingNotice(text='正在儲存中…'){

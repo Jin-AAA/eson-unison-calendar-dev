@@ -257,6 +257,8 @@
 
   async function apiPost(action, payload={}) {
     switch (action) {
+      case 'resetAdminPassword':
+        return call('resetAdminPassword', {uid: payload.uid, newPassword: payload.newPassword});
       case 'saveEvent': {
         await requireUser();
         const data = payload.data || {};

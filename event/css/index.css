@@ -596,3 +596,6 @@ input.is-error{border-color:#f04438!important;box-shadow:0 0 0 4px rgba(240,68,5
   .toast{left:14px;right:14px;bottom:14px;max-width:none}
   .drawer{padding:20px}
 }
+
+.info-note{display:flex;align-items:flex-start;gap:8px;padding:12px 14px;margin:4px 0 14px;border-radius:12px;background:#f3f5f9;border:1px solid var(--line);color:var(--muted,#667085);font-size:13px;line-height:1.5}
+.info-note .material-symbols-outlined{font-size:18px}
