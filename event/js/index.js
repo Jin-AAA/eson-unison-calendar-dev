@@ -80,6 +80,23 @@ async function refreshEditorLastSaved(){
 
 const ADMIN_UI_TEXT={
   ko:{
+    "簡答題目":"단답형 질문",
+    "詳答題目":"장문형 질문",
+    "單選題目":"단일 선택 질문",
+    "複選題目":"복수 선택 질문",
+    "請輸入內文":"본문을 입력해 주세요",
+    "選項 1":"옵션 1",
+    "選項 2":"옵션 2",
+    "列 1":"행 1",
+    "列 2":"행 2",
+    "選項 A":"옵션 A",
+    "選項 B":"옵션 B",
+    "請輸入內容":"내용을 입력해 주세요",
+    "請選擇":"선택해 주세요",
+    "選擇日期與時間":"날짜와 시간 선택",
+    "清除":"지우기",
+    "今天":"오늘",
+    "確定":"확인",
     "活動管理":"이벤트 관리",
     "所有時間皆以 KST（UTC+9）顯示":"모든 시간은 KST (UTC+9) 기준입니다",
     "新增活動":"이벤트 추가",
@@ -354,6 +371,23 @@ const ADMIN_UI_TEXT={
     "欄":"열"
   },
   en:{
+    "簡答題目":"Short answer question",
+    "詳答題目":"Long answer question",
+    "單選題目":"Multiple choice question",
+    "複選題目":"Checkbox question",
+    "請輸入內文":"Enter your text",
+    "選項 1":"Option 1",
+    "選項 2":"Option 2",
+    "列 1":"Row 1",
+    "列 2":"Row 2",
+    "選項 A":"Option A",
+    "選項 B":"Option B",
+    "請輸入內容":"Enter your answer",
+    "請選擇":"Select an option",
+    "選擇日期與時間":"Select date and time",
+    "清除":"Clear",
+    "今天":"Today",
+    "確定":"OK",
     "活動管理":"Event Management",
     "所有時間皆以 KST（UTC+9）顯示":"All times are shown in KST (UTC+9)",
     "新增活動":"New Event",
@@ -952,6 +986,21 @@ async function loadDashboardFromApi(){
     dashboardLoading=false;
   }
 }
+// Sample text that older versions stored as zh-only defaults. Shown in the admin's language when the form is opened.
+// Only unambiguous placeholder-style defaults are converted, never real-looking content such as 姓名 / 日期.
+const ZH_SAMPLE_TEXT=new Set(['簡答題目','詳答題目','單選題目','複選題目','請輸入內文','選項 1','選項 2','列 1','列 2','選項 A','選項 B']);
+function localizeSampleBlocks(blocks){
+  if(!Array.isArray(blocks)||adminUiLang==='zh')return blocks;
+  const L=v=>ZH_SAMPLE_TEXT.has(v)?adminTr(v):v;
+  blocks.forEach(b=>{
+    if(!b||b.locked)return;
+    if(b.title)b.title=L(b.title);
+    if(b.type==='paragraph'&&b.text)b.text=L(b.text);
+    ['options','rows','cols'].forEach(k=>{if(Array.isArray(b[k]))b[k]=b[k].map(L)});
+    if(b.placeholder==='請輸入內容'||b.placeholder==='請選擇')b.placeholder='';
+  });
+  return blocks;
+}
 function resetNewEventEditor(){
   currentEventId=null;
   editorPublished=false;
@@ -989,6 +1038,7 @@ async function loadEventForEditor(eventId){
     if(!editorBlocks.some(b=>b.type==='email')){
       editorBlocks.unshift({id:'email',type:'email',locked:true,title:'Email',desc:'系統固定欄位・每個 Email 僅能報名一次'});
     }
+    localizeSampleBlocks(editorBlocks);
     selectedBlockId=editorBlocks[0]?.id||'email';
     successNote=detail.pages?.success?.note||'';
     setDocumentTitle(activityConfig.name||'ESON Events');
@@ -1309,11 +1359,11 @@ function renderEditorBlock(b){
   if(b.type==='email')body=`<div class="q-title">${esc(b.title||'Email')} <span class="req">*</span></div><div class="form-input">example@email.com</div><div class="email-lock">${mi('lock')} 系統固定欄位・每個 Email 僅能報名一次</div>`;
   if(b.type==='heading')body=`<div class="heading-block ${b.align==='center'?'align-center':''}">${esc(b.title||'大標題')}</div>`;
   if(b.type==='subheading')body=`<div class="subheading-block ${b.align==='center'?'align-center':''}">${esc(b.title||'小標題')}</div>`;
-  if(b.type==='short')body=`<div class="q-title">${esc(b.title||'簡答')}${req(b)}</div>${descHtml(b)}<div class="form-input">${esc(b.placeholder||'請輸入內容')}</div>`;
-  if(b.type==='long')body=`<div class="q-title">${esc(b.title||'詳答')}${req(b)}</div>${descHtml(b)}<div class="form-textarea long-${b.height||'medium'}">${esc(b.placeholder||'請輸入內容')}</div>`;
+  if(b.type==='short')body=`<div class="q-title">${esc(b.title||'簡答')}${req(b)}</div>${descHtml(b)}<div class="form-input">${esc(adminPh(b.placeholder,'請輸入內容'))}</div>`;
+  if(b.type==='long')body=`<div class="q-title">${esc(b.title||'詳答')}${req(b)}</div>${descHtml(b)}<div class="form-textarea long-${b.height||'medium'}">${esc(adminPh(b.placeholder,'請輸入內容'))}</div>`;
   if(b.type==='radio')body=`<div class="q-title">${esc(b.title||'單選')}${req(b)}</div>${descHtml(b)}${(b.options||[]).map(o=>`<div class="choice"><span class="radio-dot"></span>${esc(o)}</div>`).join('')}${b.other?`<div class="choice"><span class="radio-dot"></span>${adminTr('其他：[________]')}</div>`:''}`;
   if(b.type==='checkbox')body=`<div class="q-title">${esc(b.title||'複選')}${req(b)}</div>${descHtml(b)}${(b.options||[]).map(o=>`<div class="choice"><span class="check-dot"></span>${esc(o)}</div>`).join('')}${b.other?`<div class="choice"><span class="check-dot"></span>${adminTr('其他：[________]')}</div>`:''}`;
-  if(b.type==='select')body=`<div class="q-title">${esc(b.title||'下拉選單')}${req(b)}</div>${descHtml(b)}<div class="form-select">${esc(b.placeholder||'請選擇')} ${mi('arrow_drop_down')}</div>`;
+  if(b.type==='select')body=`<div class="q-title">${esc(b.title||'下拉選單')}${req(b)}</div>${descHtml(b)}<div class="form-select">${esc(adminPh(b.placeholder,'請選擇'))} ${mi('arrow_drop_down')}</div>`;
   if(b.type==='grid'){
     const rows=b.rows||['列 1','列 2'], cols=b.cols||['選項 A','選項 B'];
     body=`<div class="q-title">${esc(b.title||'單選表格')}${req(b)}</div>${descHtml(b)}<div class="grid-preview" style="grid-template-columns:1.4fr repeat(${cols.length},1fr)"><span></span>${cols.map(c=>`<b>${esc(c)}</b>`).join('')}${rows.map(r=>`<span>${esc(r)}</span>${cols.map(()=>'<i>○</i>').join('')}`).join('')}</div>`;
@@ -1334,12 +1384,13 @@ function settingsPanel(block=currentBlock()){
   const title=block.type==='email'?'系統 Email 欄位':({short:'簡答設定',long:'詳答設定',radio:'單選設定',checkbox:'複選設定',select:'下拉選單設定',grid:'單選表格設定',date:'日期設定',time:'時間設定',heading:'大標題設定',subheading:'小標題設定',paragraph:'內文設定',image:'圖片設定',divider:'分隔線',spacer:'留白設定'})[block.type];
   let h=`<div class="settings-title">${title}</div>`;
   const textField=(label,key,value,textarea=false)=>`<div class="field"><label>${label}</label>${textarea?`<textarea data-prop="${key}" placeholder="選填">${esc(value||'')}</textarea>`:`<input data-prop="${key}" value="${esc(value||'')}">`}</div>`;
+  const phField=(v,zh)=>{const x=String(v||'').trim();const val=(x==='請輸入內容'||x==='請選擇')?'':x;return `<div class="field"><label>Placeholder</label><input data-prop="placeholder" value="${esc(val)}" placeholder="${esc(adminTr(zh))}"></div>`};
   if(block.type==='email') return h+`<div class="info-note">${mi('lock')}<span>系統固定欄位・每個 Email 僅能報名一次</span></div>`+toggleRow('必填','required',true,true,'此設定無法更改')+toggleRow('重複報名判定','dedupe',true,true,'系統固定用途');
   if(['short','long','radio','checkbox','select','grid','date','time'].includes(block.type))h+=textField('題目','title',block.title)+textField('說明文字','desc',block.desc,true);
-  if(['short','long'].includes(block.type))h+=textField('Placeholder','placeholder',block.placeholder);
+  if(['short','long'].includes(block.type))h+=phField(block.placeholder,'請輸入內容');
   if(block.type==='long')h+=`<div class="field"><label>輸入框初始高度</label><select data-prop="height"><option value="small" ${block.height==='small'?'selected':''}>小</option><option value="medium" ${(!block.height||block.height==='medium')?'selected':''}>中</option><option value="large" ${block.height==='large'?'selected':''}>大</option></select></div>`;
   if(['radio','checkbox'].includes(block.type)){h+=`<div class="settings-subtitle">選項</div>${optionRows(block.options,'options')}`+toggleRow('加入「其他」','other',!!block.other);}
-  if(block.type==='select'){h+=textField('Placeholder','placeholder',block.placeholder)+`<div class="settings-subtitle">選項</div>${optionRows(block.options,'options')}`;}
+  if(block.type==='select'){h+=phField(block.placeholder,'請選擇')+`<div class="settings-subtitle">選項</div>${optionRows(block.options,'options')}`;}
   if(block.type==='grid'){h+=`<div class="settings-subtitle">列</div>${optionRows(block.rows,'rows')}<div class="settings-subtitle">欄</div>${optionRows(block.cols,'cols')}`+toggleRow('每一列都必須回答','everyRow',!!block.everyRow);}
   if(['short','long','radio','checkbox','select','grid','date','time'].includes(block.type))h+=toggleRow('必填','required',!!block.required);
   if(['heading','subheading'].includes(block.type)){h+=textField('文字','title',block.title)+`<div class="field"><label>對齊</label><select data-prop="align"><option value="left" ${block.align!=='center'?'selected':''}>靠左</option><option value="center" ${block.align==='center'?'selected':''}>置中</option></select></div>`;}
@@ -1400,9 +1451,57 @@ function bindEditorBlocks(){
 }
 function refreshEditorBlocks(){const c=document.querySelector('#blocksContainer');if(!c)return;c.innerHTML=formBlocks();bindEditorBlocks();const p=document.querySelector('#settingsPanel');if(p){p.innerHTML=settingsPanel();bindSettingsPanel()}}
 function addBlock(type){
-  const id=type+'_'+Date.now();const defaults={short:{title:'簡答題目',desc:'',placeholder:'請輸入內容',required:false},long:{title:'詳答題目',desc:'',placeholder:'請輸入內容',required:false,height:'medium'},radio:{title:'單選題目',desc:'',required:false,options:['選項 1','選項 2'],other:false},checkbox:{title:'複選題目',desc:'',required:false,options:['選項 1','選項 2'],other:false},select:{title:'下拉選單',desc:'',placeholder:'請選擇',required:false,options:['選項 1','選項 2']},grid:{title:'單選表格',desc:'',required:false,rows:['列 1','列 2'],cols:['選項 A','選項 B'],everyRow:false},date:{title:'日期',desc:'',required:false},time:{title:'時間',desc:'',required:false},heading:{title:'大標題',align:'left'},subheading:{title:'小標題',align:'left'},paragraph:{text:'請輸入內文',align:'left'},image:{size:'large',alt:'',dataUrl:''},divider:{},spacer:{height:'medium'}};editorBlocks.push({id,type,...(defaults[type]||{})});selectedBlockId=id;refreshEditorBlocks();document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});toast('已新增元件，可在右側調整設定');}
+  const id=type+'_'+Date.now();const T=x=>adminTr(x);const defaults={short:{title:T('簡答題目'),desc:'',placeholder:'',required:false},long:{title:T('詳答題目'),desc:'',placeholder:'',required:false,height:'medium'},radio:{title:T('單選題目'),desc:'',required:false,options:[T('選項 1'),T('選項 2')],other:false},checkbox:{title:T('複選題目'),desc:'',required:false,options:[T('選項 1'),T('選項 2')],other:false},select:{title:T('下拉選單'),desc:'',placeholder:'',required:false,options:[T('選項 1'),T('選項 2')]},grid:{title:T('單選表格'),desc:'',required:false,rows:[T('列 1'),T('列 2')],cols:[T('選項 A'),T('選項 B')],everyRow:false},date:{title:T('日期'),desc:'',required:false},time:{title:T('時間'),desc:'',required:false},heading:{title:T('大標題'),align:'left'},subheading:{title:T('小標題'),align:'left'},paragraph:{text:T('請輸入內文'),align:'left'},image:{size:'large',alt:'',dataUrl:''},divider:{},spacer:{height:'medium'}};editorBlocks.push({id,type,...(defaults[type]||{})});selectedBlockId=id;refreshEditorBlocks();document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});toast('已新增元件，可在右側調整設定');}
 
-function showActivitySettings(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="activitySettingsModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>活動基本設定</h3><p>此處是整個活動層級的設定，和右側「元件設定」不同。</p></div><button class="btn icon" id="closeActivitySettings">${mi('close')}</button></div><div class="settings-grid"><div class="field"><label>活動名稱</label><input id="cfgName" value="${esc(activityConfig.name)}"></div><div></div><div class="field full-span"><label>專屬網址</label><div class="url-field-wrap"><span class="url-prefix">https://eson1228.com/event/</span><input id="cfgSlug" value="${esc(activityConfig.slug)}" placeholder="eson-birthday-2026"></div><div class="url-help">僅限英文字母、數字與連字號（-），例如：<b>eson-birthday-2026</b></div></div><div class="field"><label>表單開放時間（KST）</label><input id="cfgStart" type="datetime-local" value="${activityConfig.start}"></div><div class="field"><label>表單關閉時間（KST）</label><input id="cfgEnd" type="datetime-local" value="${activityConfig.end}"></div><div class="field"><label>初始名額</label><input id="cfgCapacity" type="number" min="1" value="${activityConfig.capacity}"></div><div class="field"><label>前台活動列表</label><select id="cfgList"><option value="yes" ${activityConfig.showInList?'selected':''}>顯示</option><option value="no" ${!activityConfig.showInList?'selected':''}>不顯示</option></select></div></div>${toggleRow('顯示目前報名人數','cfgShowCount',activityConfig.showCount)}<div class="modal-actions"><button class="btn" id="cancelActivitySettings">取消</button><button class="btn primary" id="saveActivitySettings">儲存設定</button></div></div></div>`);const close=()=>document.querySelector('#activitySettingsModal')?.remove();document.querySelector('#closeActivitySettings').onclick=close;document.querySelector('#cancelActivitySettings').onclick=close;const sw=document.querySelector('[data-toggle="cfgShowCount"]');if(sw)sw.onclick=()=>sw.classList.toggle('on');const slugInput=document.querySelector('#cfgSlug');if(slugInput)slugInput.addEventListener('input',()=>{slugInput.value=slugInput.value.toLowerCase().replace(/[^a-z0-9-]/g,'')});document.querySelector('#saveActivitySettings').onclick=()=>{activityConfig={...activityConfig,name:document.querySelector('#cfgName').value,slug:document.querySelector('#cfgSlug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,''),start:document.querySelector('#cfgStart').value,end:document.querySelector('#cfgEnd').value,capacity:+document.querySelector('#cfgCapacity').value||1,showInList:document.querySelector('#cfgList').value==='yes',showCount:sw?.classList.contains('on')};close();renderEditor();toast('活動基本設定已更新')};}
+
+// ---- Date-time picker (follows the admin UI language; the native one follows the OS/browser language)
+function dtpLocale(){return({zh:'zh-TW',ko:'ko-KR',en:'en-US'})[adminUiLang]||'en-US'}
+function dtpHtml(id,value){return `<div class="dtp"><input type="hidden" id="${id}" value="${esc(value||'')}"><button type="button" class="dtp-btn" data-dtp-for="${id}"><span class="dtp-text"></span>${mi('calendar_month')}</button></div>`}
+function dtpShow(root,id){const inp=root.querySelector('#'+id);const t=root.querySelector(`[data-dtp-for="${id}"] .dtp-text`);if(!inp||!t)return;const v=inp.value;t.textContent=v?v.replace('T',' '):adminTr('選擇日期與時間');t.classList.toggle('empty',!v)}
+function initDtp(root){
+  if(!root)return;
+  root.querySelectorAll('[data-dtp-for]').forEach(btn=>{
+    const id=btn.dataset.dtpFor;dtpShow(root,id);
+    btn.onclick=e=>{e.stopPropagation();openDtp(root,id,btn)};
+  });
+}
+function openDtp(root,id,btn){
+  document.querySelector('.dtp-pop')?.remove();
+  const inp=root.querySelector('#'+id);const loc=dtpLocale();
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(inp.value||'');
+  const now=new Date();
+  let sel=m?{y:+m[1],mo:+m[2]-1,d:+m[3],h:+m[4],mi:+m[5]}:null;
+  let vy=sel?sel.y:now.getFullYear(),vm=sel?sel.mo:now.getMonth();
+  let h=sel?sel.h:9,mi_=sel?sel.mi:0,pick=sel?{y:sel.y,mo:sel.mo,d:sel.d}:null;
+  const pop=document.createElement('div');pop.className='dtp-pop';
+  document.body.appendChild(pop);
+  const pad=n=>String(n).padStart(2,'0');
+  const wk=[...Array(7)].map((_,i)=>new Intl.DateTimeFormat(loc,{weekday:'narrow'}).format(new Date(2023,0,1+i)));
+  const draw=()=>{
+    const title=new Intl.DateTimeFormat(loc,{year:'numeric',month:'long'}).format(new Date(vy,vm,1));
+    const first=new Date(vy,vm,1).getDay(),days=new Date(vy,vm+1,0).getDate();
+    let cells='';for(let i=0;i<first;i++)cells+='<span></span>';
+    for(let d=1;d<=days;d++){const on=pick&&pick.y===vy&&pick.mo===vm&&pick.d===d;const td=now.getFullYear()===vy&&now.getMonth()===vm&&now.getDate()===d;cells+=`<button type="button" class="dtp-day${on?' on':''}${td?' today':''}" data-d="${d}">${d}</button>`}
+    const hours=[...Array(24)].map((_,i)=>`<option value="${i}" ${i===h?'selected':''}>${pad(i)}</option>`).join('');
+    const mins=[...Array(60)].map((_,i)=>`<option value="${i}" ${i===mi_?'selected':''}>${pad(i)}</option>`).join('');
+    pop.innerHTML=`<div class="dtp-head"><button type="button" class="dtp-nav" data-nav="-1">${mi('chevron_left')}</button><b>${title}</b><button type="button" class="dtp-nav" data-nav="1">${mi('chevron_right')}</button></div><div class="dtp-grid dtp-wk">${wk.map(x=>`<span>${x}</span>`).join('')}</div><div class="dtp-grid">${cells}</div><div class="dtp-time"><select id="dtpH">${hours}</select><b>:</b><select id="dtpM">${mins}</select></div><div class="dtp-foot"><button type="button" class="btn small" data-act="clear">清除</button><button type="button" class="btn small" data-act="today">今天</button><button type="button" class="btn small primary" data-act="ok">確定</button></div>`;
+    translateAdminUI(pop);
+    pop.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{vm+=+b.dataset.nav;if(vm<0){vm=11;vy--}if(vm>11){vm=0;vy++}draw()});
+    pop.querySelectorAll('.dtp-day').forEach(b=>b.onclick=()=>{pick={y:vy,mo:vm,d:+b.dataset.d};draw()});
+    pop.querySelector('#dtpH').onchange=e=>{h=+e.target.value};pop.querySelector('#dtpM').onchange=e=>{mi_=+e.target.value};
+    pop.querySelector('[data-act=clear]').onclick=()=>{inp.value='';dtpShow(root,id);close()};
+    pop.querySelector('[data-act=today]').onclick=()=>{pick={y:now.getFullYear(),mo:now.getMonth(),d:now.getDate()};vy=pick.y;vm=pick.mo;draw()};
+    pop.querySelector('[data-act=ok]').onclick=()=>{if(pick){inp.value=`${pick.y}-${pad(pick.mo+1)}-${pad(pick.d)}T${pad(h)}:${pad(mi_)}`;dtpShow(root,id)}close()};
+  };
+  const close=()=>{pop.remove();document.removeEventListener('mousedown',outside,true)};
+  const outside=e=>{if(!pop.contains(e.target)&&!btn.contains(e.target))close()};
+  draw();
+  const r=btn.getBoundingClientRect();
+  let top=r.bottom+6;if(top+pop.offsetHeight>innerHeight-8)top=Math.max(8,r.top-pop.offsetHeight-6);
+  pop.style.top=top+'px';pop.style.left=Math.min(r.left,innerWidth-pop.offsetWidth-8)+'px';
+  setTimeout(()=>document.addEventListener('mousedown',outside,true),0);
+}
+function showActivitySettings(){document.body.insertAdjacentHTML('beforeend',`<div class="modal-backdrop" id="activitySettingsModal"><div class="modal modal-wide"><div class="modal-title-row"><div><h3>活動基本設定</h3><p>此處是整個活動層級的設定，和右側「元件設定」不同。</p></div><button class="btn icon" id="closeActivitySettings">${mi('close')}</button></div><div class="settings-grid"><div class="field"><label>活動名稱</label><input id="cfgName" value="${esc(activityConfig.name)}"></div><div></div><div class="field full-span"><label>專屬網址</label><div class="url-field-wrap"><span class="url-prefix">https://eson1228.com/event/</span><input id="cfgSlug" value="${esc(activityConfig.slug)}" placeholder="eson-birthday-2026"></div><div class="url-help">僅限英文字母、數字與連字號（-），例如：<b>eson-birthday-2026</b></div></div><div class="field"><label>表單開放時間（KST）</label>${dtpHtml('cfgStart',activityConfig.start)}</div><div class="field"><label>表單關閉時間（KST）</label>${dtpHtml('cfgEnd',activityConfig.end)}</div><div class="field"><label>初始名額</label><input id="cfgCapacity" type="number" min="1" value="${activityConfig.capacity}"></div><div class="field"><label>前台活動列表</label><select id="cfgList"><option value="yes" ${activityConfig.showInList?'selected':''}>顯示</option><option value="no" ${!activityConfig.showInList?'selected':''}>不顯示</option></select></div></div>${toggleRow('顯示目前報名人數','cfgShowCount',activityConfig.showCount)}<div class="modal-actions"><button class="btn" id="cancelActivitySettings">取消</button><button class="btn primary" id="saveActivitySettings">儲存設定</button></div></div></div>`);initDtp(document.querySelector('#activitySettingsModal'));const close=()=>document.querySelector('#activitySettingsModal')?.remove();document.querySelector('#closeActivitySettings').onclick=close;document.querySelector('#cancelActivitySettings').onclick=close;const sw=document.querySelector('[data-toggle="cfgShowCount"]');if(sw)sw.onclick=()=>sw.classList.toggle('on');const slugInput=document.querySelector('#cfgSlug');if(slugInput)slugInput.addEventListener('input',()=>{slugInput.value=slugInput.value.toLowerCase().replace(/[^a-z0-9-]/g,'')});document.querySelector('#saveActivitySettings').onclick=()=>{activityConfig={...activityConfig,name:document.querySelector('#cfgName').value,slug:document.querySelector('#cfgSlug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,''),start:document.querySelector('#cfgStart').value,end:document.querySelector('#cfgEnd').value,capacity:+document.querySelector('#cfgCapacity').value||1,showInList:document.querySelector('#cfgList').value==='yes',showCount:sw?.classList.contains('on')};close();renderEditor();toast('活動基本設定已更新')};}
 
 function showCapacityModal(eventId){
   const ev=demoEvents.find(x=>x.id===eventId);
@@ -1418,10 +1517,10 @@ function showCapacityModal(eventId){
     <h3>再次開放增收</h3>
     <p>目前總名額為 <b>${currentTotal}</b> 人。增加名額後不會因取消、退款或作廢自動釋出名額。</p>
     <div class="field"><label>本次增加名額</label><input id="capAddCount" type="number" min="1" step="1" value="5"></div>
-    <div class="field"><label>${alreadyClosed?'新的關閉時間':'新的關閉時間（可選）'} <span class="tiny muted">KST</span></label><input id="capNewClose" type="datetime-local"></div>
+    <div class="field"><label>${alreadyClosed?'新的關閉時間':'新的關閉時間（可選）'} <span class="tiny muted">KST</span></label>${dtpHtml('capNewClose','')}</div>
     ${alreadyClosed?'<div class="reuse-confirm-note">此活動已因時間截止。確認後會立即重新開放，並持續到你設定的「新的關閉時間」。</div>':''}
     <div class="modal-actions"><button class="btn" id="capCancel">取消</button><button class="btn primary" id="capConfirm">確認再次開放</button></div>
-  </div></div>`);
+  </div></div>`);initDtp(document.querySelector('#capacityModal'));
 
   const closeModal=()=>document.querySelector('#capacityModal')?.remove();
   document.querySelector('#capCancel').onclick=closeModal;
@@ -1622,7 +1721,7 @@ async function loadPublicEventBySlug(slug){
       showInList:detail.event.showInEventList!==false,
       showCount:detail.event.showRegistrationCount!==false
     };
-    editorBlocks=Array.isArray(detail.blocks)?detail.blocks:[];
+    editorBlocks=localizeSampleBlocks(Array.isArray(detail.blocks)?detail.blocks:[]);
     successNote=detail.pages?.success?.note||'';
 
     if(detail.state==='notstarted')return renderStatus('notstarted');
@@ -1713,6 +1812,7 @@ function langOptSelected(renderFn=renderPublic){setTimeout(()=>{syncHtmlLang();c
 function publicEmailHint(b){
   return PT('emailHint');
 }
+function adminPh(v,zhDefault){const x=String(v||'').trim();return (!x||x==='請輸入內容'||x==='請選擇')?adminTr(zhDefault):x}
 function publicPlaceholder(b,fallbackKey){
   const p=String(b.placeholder||'').trim();
   const defaults=['','請輸入內容','請選擇'];
