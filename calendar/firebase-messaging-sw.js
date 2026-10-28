@@ -1,12 +1,15 @@
 /* ESON × UNISON Calendar Firebase Messaging Service Worker
-   v29 */
+   v32 */
 
 // Keep this handler before the Firebase imports so notification taps always
 // use the calendar's own navigation behavior.
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   const rawTarget = event.notification?.data?.url || './';
-  const targetUrl = new URL(rawTarget, self.location.origin);
+  // Resolve against the SW scope, not the origin root: when the site lives in a
+  // sub-folder (e.g. GitHub Pages /repo/calendar/), './' used to point at the
+  // domain root and opened a 404 page when the app wasn't already running.
+  const targetUrl = new URL(rawTarget, self.registration.scope);
   targetUrl.searchParams.set('open', 'today');
 
   event.waitUntil((async () => {

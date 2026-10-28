@@ -2,8 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isValidToken(tokenId) {
-      let data = request.resource.data;
+
+    // Shape and value checks shared by create and update.
+    function isValidToken(tokenId, data) {
       return data.keys().hasAll([
           'token', 'tokenHash', 'project', 'platform', 'userAgent',
           'language', 'browserLanguage', 'timezone', 'pageUrl',
@@ -32,17 +33,32 @@ service cloud.firestore {
         && data.pageUrl.size() <= 2048
         && data.permission == 'granted'
         && data.enabled == true
-        && data.createdAt == request.time
         && data.updatedAt == request.time;
     }
 
+    // New device: createdAt must be the server time of this write.
+    function canCreateToken(tokenId) {
+      return isValidToken(tokenId, request.resource.data)
+        && request.resource.data.createdAt == request.time;
+    }
+
+    // Same device saving again (token refresh, language switch):
+    // createdAt and the token itself must stay unchanged.
+    function canUpdateToken(tokenId) {
+      return isValidToken(tokenId, request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.token == resource.data.token;
+    }
+
     match /tokens/{tokenId} {
-      allow create, update: if isValidToken(tokenId);
+      allow create: if canCreateToken(tokenId);
+      allow update: if canUpdateToken(tokenId);
       allow read, delete: if false;
     }
 
     match /tokens-dev/{tokenId} {
-      allow create, update: if isValidToken(tokenId);
+      allow create: if canCreateToken(tokenId);
+      allow update: if canUpdateToken(tokenId);
       allow read, delete: if false;
     }
 
