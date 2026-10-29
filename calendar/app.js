@@ -46,7 +46,11 @@ const i18n = {
     desktopNotificationTitle: '請使用手機設定通知',
     desktopNotificationMessage: '通知功能主要提供手機推播提醒。\n\n請使用手機開啟網站，並將網頁加入主畫面後，再開啟通知功能。',
     todayEventsKicker: 'TODAY',
-    todayEventsTitle: '今天有什麼事件？',
+    todayEventsTitle: '今天有什麼活動？',
+    upcomingLabel: '即將到來',
+    tomorrowLabel: '明天',
+    nothingToday: '今天沒有活動',
+    koreaAlreadyThatDay: '韓國已經是這一天了',
     todayEventsClose: '直接關閉',
     todayEventsDismissToday: '今日不再查看',
     errorTitle: '發生錯誤',
@@ -96,6 +100,10 @@ const i18n = {
     desktopNotificationMessage: '알림 기능은 주로 휴대폰 푸시 알림을 위한 기능입니다.\n\n휴대폰에서 사이트를 열고 홈 화면에 추가한 뒤 알림을 설정해 주세요.',
     todayEventsKicker: 'TODAY',
     todayEventsTitle: '오늘은 어떤 일정이 있나요?',
+    upcomingLabel: '다가오는 일정',
+    tomorrowLabel: '내일',
+    nothingToday: '오늘은 일정이 없어요',
+    koreaAlreadyThatDay: '한국은 이미 이날이에요',
     todayEventsClose: '닫기',
     todayEventsDismissToday: '오늘 다시 보지 않기',
     errorTitle: '오류가 발생했습니다',
@@ -145,6 +153,10 @@ const i18n = {
     desktopNotificationMessage: 'Notifications are mainly designed for mobile push alerts.\n\nPlease open this site on your phone, add it to your Home Screen, then enable notifications.',
     todayEventsKicker: 'TODAY',
     todayEventsTitle: 'What’s happening today?',
+    upcomingLabel: 'Coming up',
+    tomorrowLabel: 'Tomorrow',
+    nothingToday: 'Nothing scheduled today',
+    koreaAlreadyThatDay: 'It’s already this day in Korea',
     todayEventsClose: 'Close',
     todayEventsDismissToday: 'Don’t show again today',
     errorTitle: 'Something went wrong',
@@ -194,6 +206,10 @@ const i18n = {
     desktopNotificationMessage: '通知機能は主にスマートフォンのプッシュ通知用です。\n\nスマートフォンでこのサイトを開き、ホーム画面に追加してから通知を設定してください。',
     todayEventsKicker: 'TODAY',
     todayEventsTitle: '今日の予定は？',
+    upcomingLabel: 'まもなく',
+    tomorrowLabel: '明日',
+    nothingToday: '今日の予定はありません',
+    koreaAlreadyThatDay: '韓国ではもうこの日です',
     todayEventsClose: '閉じる',
     todayEventsDismissToday: '今日はもう表示しない',
     errorTitle: 'エラーが発生しました',
@@ -521,20 +537,35 @@ function getKoreaDateKey(date = new Date()) {
   return date.toLocaleDateString('sv-SE', { timeZone: BASE_TIME_ZONE });
 }
 
+function sortDayEvents(a, b) {
+  if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1;
+  return a.start - b.start;
+}
+
+// Events on the viewer's own local date. (Korea-time all-day events stay on
+// their own date here, matching the calendar grid.)
 function getTodayEvents() {
   const key = dateKey(new Date());
-  const koreaKey = getKoreaDateKey();
-  // Korea-time all-day events are pushed when that date starts in Korea, which
-  // can still be "yesterday" locally (e.g. 23:00 in Taiwan). Include them here
-  // so tapping that notification shows the event.
-  const isKoreaToday = event => event.followsKoreaDate &&
-    koreaKey >= event.allDayStartKey && (!event.allDayEndKey || koreaKey < event.allDayEndKey);
+  return calendarEvents.filter(event => eventOccursOnDate(event, key)).sort(sortDayEvents);
+}
+
+// Tomorrow's events, minus anything already listed today (multi-day events).
+function getUpcomingEvents() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const key = dateKey(tomorrow);
+  const todayIds = new Set(getTodayEvents().map(event => event.id));
   return calendarEvents
-    .filter(event => eventOccursOnDate(event, key) || isKoreaToday(event))
-    .sort((a, b) => {
-      if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1;
-      return a.start - b.start;
-    });
+    .filter(event => !todayIds.has(event.id) && eventOccursOnDate(event, key))
+    .sort(sortDayEvents);
+}
+
+// A Korea-time all-day event whose date has already begun in Korea, e.g. a
+// birthday on the 30th seen at 23:00 on the 29th in Taiwan (push already sent).
+function isAlreadyThatDayInKorea(event) {
+  if (!event.followsKoreaDate) return false;
+  const koreaKey = getKoreaDateKey();
+  return koreaKey >= event.allDayStartKey && (!event.allDayEndKey || koreaKey < event.allDayEndKey);
 }
 
 function isTodayEventsHidden() {
@@ -570,21 +601,35 @@ function renderTodayEventsModal() {
     weekday: 'long'
   });
 
-  todayEventsList.innerHTML = events.map(event => {
-    const tagLabel = event.category
-      ? (i18n[currentLang].tags[event.category] || event.category)
-      : i18n[currentLang].uncategorized;
+  const upcoming = getUpcomingEvents();
+  const t = i18n[currentLang];
+
+  const card = (event, isUpcoming) => {
+    const tagLabel = event.category ? (t.tags[event.category] || event.category) : t.uncategorized;
+    const timeText = isUpcoming ? `${t.tomorrowLabel}　${formatEventTime(event)}` : formatEventTime(event);
+    const note = isUpcoming && isAlreadyThatDayInKorea(event)
+      ? `<span class="today-event-note">${escapeHtml(t.koreaAlreadyThatDay)}</span>`
+      : '';
     return `
       <button class="today-event-card" style="${eventStyle(event)}" data-event-id="${escapeHtml(event.id)}" type="button">
         <span class="today-event-content">
-          <span class="today-event-time">${escapeHtml(formatEventTime(event))}</span>
+          <span class="today-event-time">${escapeHtml(timeText)}</span>
           <strong class="today-event-title">${escapeHtml(event.title)}</strong>
           <span class="today-event-tag">${escapeHtml(tagLabel)}</span>
+          ${note}
         </span>
         <span class="today-event-arrow">${ICONS.chevronRight}</span>
       </button>
     `;
-  }).join('');
+  };
+
+  const todayHtml = events.length
+    ? events.map(event => card(event, false)).join('')
+    : `<p class="today-events-empty">${escapeHtml(t.nothingToday)}</p>`;
+  const upcomingHtml = upcoming.length
+    ? `<h4 class="today-events-section">${escapeHtml(t.upcomingLabel)}</h4>${upcoming.map(event => card(event, true)).join('')}`
+    : '';
+  todayEventsList.innerHTML = todayHtml + upcomingHtml;
 
   todayEventsList.querySelectorAll('.today-event-card').forEach(button => {
     button.addEventListener('click', () => {
@@ -611,8 +656,11 @@ function maybeShowTodayEvents() {
   // "don't show again today" earlier.
   if (loadError || (!requestedFromNotification && isTodayEventsHidden())) return;
 
-  const events = getTodayEvents();
-  if (!events.length || !todayEventsModal || todayEventsModal.open) return;
+  const hasToday = getTodayEvents().length > 0;
+  // From a notification, also open when only tomorrow has something (e.g. a
+  // Korea-time birthday pushed at 23:00 local time the day before).
+  const hasUpcoming = requestedFromNotification && getUpcomingEvents().length > 0;
+  if ((!hasToday && !hasUpcoming) || !todayEventsModal || todayEventsModal.open) return;
 
   renderTodayEventsModal();
   if (appModal?.open) appModal.close();
@@ -944,7 +992,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=33.1', { scope: './' });
+    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=34', { scope: './' });
     console.log('Service Worker registered:', swRegistration.scope);
     return swRegistration;
   } catch (error) {

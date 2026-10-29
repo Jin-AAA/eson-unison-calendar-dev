@@ -644,6 +644,23 @@ dialog[open] { animation: sheet-in .22s ease-out; }
 .today-event-time { color: var(--ink-soft); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .today-event-title { font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
 .today-event-tag { color: var(--ink-soft); font-size: 12px; opacity: .75; }
+.today-event-note { margin-top: 4px; color: var(--ink); font-size: 12px; font-weight: 600; }
+
+.today-events-section {
+  margin: 14px 2px 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.today-events-empty {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  color: var(--muted);
+  background: var(--paper);
+  font-size: 14px;
+}
 .today-event-arrow { align-self: center; margin-right: 12px; color: var(--faint); display: inline-grid; }
 
 .today-events-actions {
