@@ -42,11 +42,15 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
     }
 
-    // Same device saving again (token refresh, language switch):
-    // createdAt and the token itself must stay unchanged.
+    // Same device saving again (token refresh, language switch).
+    // createdAt may stay unchanged (calendar v31+) or be reset to now
+    // (older site versions rewrite the whole doc), so both the test site
+    // and the production site keep working with this single rules file.
+    // The token itself must not change.
     function canUpdateToken(tokenId) {
       return isValidToken(tokenId, request.resource.data)
-        && request.resource.data.createdAt == resource.data.createdAt
+        && (request.resource.data.createdAt == resource.data.createdAt
+            || request.resource.data.createdAt == request.time)
         && request.resource.data.token == resource.data.token;
     }
 

@@ -51,6 +51,7 @@ const i18n = {
     todayEventsDismissToday: '今日不再查看',
     errorTitle: '發生錯誤',
     allDay: '整天',
+    allDayKorea: '整天（韓國時間）',
     followEson: 'follow ESON',
     uncategorized: '未分類',
     openLink: '開啟連結',
@@ -99,6 +100,7 @@ const i18n = {
     todayEventsDismissToday: '오늘 다시 보지 않기',
     errorTitle: '오류가 발생했습니다',
     allDay: '종일',
+    allDayKorea: '종일 (한국 시간)',
     followEson: 'follow ESON',
     uncategorized: '미분류',
     openLink: '링크 열기',
@@ -147,6 +149,7 @@ const i18n = {
     todayEventsDismissToday: 'Don’t show again today',
     errorTitle: 'Something went wrong',
     allDay: 'All day',
+    allDayKorea: 'All day (Korea time)',
     followEson: 'follow ESON',
     uncategorized: 'Uncategorized',
     openLink: 'Open Link',
@@ -195,6 +198,7 @@ const i18n = {
     todayEventsDismissToday: '今日はもう表示しない',
     errorTitle: 'エラーが発生しました',
     allDay: '終日',
+    allDayKorea: '終日（韓国時間）',
     followEson: 'follow ESON',
     uncategorized: '未分類',
     openLink: 'リンクを開く',
@@ -410,6 +414,7 @@ function cleanDescription(description = '') {
     .map(line => line.trim())
     .filter(line => !/^CATEGORY\s*:/i.test(line))
     .filter(line => !/^PUSH\s*:/i.test(line))
+    .filter(line => !/^PUSH_TZ\s*:/i.test(line))
     .join('\n')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -425,6 +430,10 @@ function normalizeGoogleEvent(item) {
   const endDate = endRaw ? (isAllDay ? new Date(`${endRaw}T00:00:00`) : new Date(endRaw)) : null;
   const category = extractCategory(item.description || '');
   const cleanDesc = cleanDescription(item.description || '');
+  // "PUSH_TZ: KST" on an all-day event: it still shows as all-day on its date,
+  // but the push follows Korea's date (see the push worker).
+  const followsKoreaDate = isAllDay && getDescriptionLines(item.description || '')
+    .some(line => /^PUSH_TZ\s*:\s*(kst|korea|seoul|asia\/seoul)\s*$/i.test(line));
 
   return {
     id: item.id,
@@ -435,6 +444,9 @@ function normalizeGoogleEvent(item) {
     start: startDate,
     end: endDate,
     isAllDay,
+    followsKoreaDate,
+    allDayStartKey: isAllDay ? startRaw : '',
+    allDayEndKey: isAllDay ? (endRaw || '') : '',
     htmlLink: item.htmlLink || '',
     reminders: item.reminders || {}
   };
@@ -490,7 +502,11 @@ function formatStartTime(event) {
 }
 
 function formatEventTime(event) {
-  if (event.isAllDay) return i18n[currentLang].allDay;
+  if (event.isAllDay) {
+    return event.followsKoreaDate && getUserTimeZone() !== BASE_TIME_ZONE
+      ? i18n[currentLang].allDayKorea
+      : i18n[currentLang].allDay;
+  }
   const locale = getLocale();
   // hourCycle 'h23' instead of hour12:false — the latter renders midnight as "24:00" in en-US.
   const options = TIME_OPTIONS;
@@ -500,10 +516,21 @@ function formatEventTime(event) {
   return event.start.toLocaleTimeString(locale, options);
 }
 
+function getKoreaDateKey(date = new Date()) {
+  // sv-SE formats as YYYY-MM-DD
+  return date.toLocaleDateString('sv-SE', { timeZone: BASE_TIME_ZONE });
+}
+
 function getTodayEvents() {
   const key = dateKey(new Date());
+  const koreaKey = getKoreaDateKey();
+  // Korea-time all-day events are pushed when that date starts in Korea, which
+  // can still be "yesterday" locally (e.g. 23:00 in Taiwan). Include them here
+  // so tapping that notification shows the event.
+  const isKoreaToday = event => event.followsKoreaDate &&
+    koreaKey >= event.allDayStartKey && (!event.allDayEndKey || koreaKey < event.allDayEndKey);
   return calendarEvents
-    .filter(event => eventOccursOnDate(event, key))
+    .filter(event => eventOccursOnDate(event, key) || isKoreaToday(event))
     .sort((a, b) => {
       if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1;
       return a.start - b.start;
@@ -917,7 +944,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=32', { scope: './' });
+    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=33', { scope: './' });
     console.log('Service Worker registered:', swRegistration.scope);
     return swRegistration;
   } catch (error) {
