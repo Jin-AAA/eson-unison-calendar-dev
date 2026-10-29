@@ -26,7 +26,7 @@ const i18n = {
     weekdays: ['日', '一', '二', '三', '四', '五', '六'],
     monthFormat: (date) => `${date.getFullYear()}年 ${date.getMonth() + 1}月`,
     monthParts: (date) => ({ month: `${date.getMonth() + 1}月`, year: `${date.getFullYear()}` }),
-    seoulTime: '首爾時間',
+    seoulTime: '韓國時間 KST',
     installHint: '請先將網頁加入主畫面後即可接收通知。',
     enableNotifications: '接收通知',
     notificationEnabled: '通知設定成功',
@@ -75,7 +75,7 @@ const i18n = {
     weekdays: ['일', '월', '화', '수', '목', '금', '토'],
     monthFormat: (date) => `${date.getFullYear()}년 ${date.getMonth() + 1}월`,
     monthParts: (date) => ({ month: `${date.getMonth() + 1}월`, year: `${date.getFullYear()}` }),
-    seoulTime: '서울 시간',
+    seoulTime: '한국 시간 KST',
     installHint: '현재 브라우저에서 설치 안내를 제공하지 않습니다. 브라우저 메뉴에서 홈 화면에 추가해 주세요.',
     enableNotifications: '알림 받기',
     notificationEnabled: '알림 설정이 완료되었습니다.',
@@ -124,7 +124,7 @@ const i18n = {
     weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     monthFormat: (date) => date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
     monthParts: (date) => ({ month: date.toLocaleDateString('en-US', { month: 'long' }), year: `${date.getFullYear()}` }),
-    seoulTime: 'Seoul time',
+    seoulTime: 'Korea time (KST)',
     installHint: 'Your browser is not showing an install prompt yet. Use the browser menu to add this page to your home screen.',
     enableNotifications: 'Receive notifications',
     notificationEnabled: 'Notification settings saved.',
@@ -173,7 +173,7 @@ const i18n = {
     weekdays: ['日', '月', '火', '水', '木', '金', '土'],
     monthFormat: (date) => `${date.getFullYear()}年 ${date.getMonth() + 1}月`,
     monthParts: (date) => ({ month: `${date.getMonth() + 1}月`, year: `${date.getFullYear()}` }),
-    seoulTime: 'ソウル時間',
+    seoulTime: '韓国時間 KST',
     installHint: '現在ブラウザのインストール案内が表示されていません。ブラウザメニューからホーム画面に追加してください。',
     enableNotifications: '通知を受け取る',
     notificationEnabled: '通知設定が完了しました。',
@@ -944,7 +944,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=33', { scope: './' });
+    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=33.1', { scope: './' });
     console.log('Service Worker registered:', swRegistration.scope);
     return swRegistration;
   } catch (error) {
