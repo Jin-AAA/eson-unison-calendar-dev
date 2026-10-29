@@ -225,29 +225,50 @@ const i18n = {
 };
 
 
-function detectInitialLanguage() {
-  const timeZone = getUserTimeZone();
-  const timezoneLanguageMap = {
-    'Asia/Taipei': 'zh',
-    'Asia/Shanghai': 'zh',
-    'Asia/Chongqing': 'zh',
-    'Asia/Harbin': 'zh',
-    'Asia/Urumqi': 'zh',
-    'Asia/Seoul': 'ko',
-    'Asia/Tokyo': 'ja'
-  };
+const LANGUAGE_KEY = 'esonUnisonLanguage';
+const SUPPORTED_LANGUAGES = ['zh', 'ko', 'ja', 'en'];
 
-  if (timezoneLanguageMap[timeZone]) return timezoneLanguageMap[timeZone];
+// Default language, in order:
+//   1. a language the user picked with the buttons (remembered)
+//   2. the browser / phone language list, in the user's preference order —
+//      the first one the site supports wins (zh / ko / ja / en)
+//   3. only if none of those are supported: time zone
+//      (Taiwan / China -> zh, Korea -> ko, Japan -> ja)
+//   4. English
+function detectInitialLanguage() {
+  try {
+    const saved = localStorage.getItem(LANGUAGE_KEY);
+    if (SUPPORTED_LANGUAGES.includes(saved)) return saved;
+  } catch (error) { /* storage unavailable */ }
 
   const languages = navigator.languages && navigator.languages.length
     ? navigator.languages
     : [navigator.language || ''];
 
-  const normalized = languages.map(lang => String(lang).toLowerCase());
-  if (normalized.some(lang => lang === 'zh-tw' || lang === 'zh-hant' || lang === 'zh-cn' || lang === 'zh-hans' || lang.startsWith('zh-'))) return 'zh';
-  if (normalized.some(lang => lang === 'ko' || lang.startsWith('ko-'))) return 'ko';
-  if (normalized.some(lang => lang === 'ja' || lang.startsWith('ja-'))) return 'ja';
-  return 'en';
+  // Walk the list in order. The old code asked "is Chinese anywhere in the
+  // list?" first, so e.g. ['ko-KR', 'en-US', 'zh-TW'] showed Chinese.
+  for (const raw of languages) {
+    const primary = String(raw).toLowerCase().split('-')[0];
+    if (SUPPORTED_LANGUAGES.includes(primary)) return primary;
+  }
+
+  const timezoneLanguageMap = {
+    'Asia/Taipei': 'zh',
+    'Asia/Shanghai': 'zh',
+    'Asia/Chongqing': 'zh',
+    'Asia/Chungking': 'zh',
+    'Asia/Harbin': 'zh',
+    'Asia/Urumqi': 'zh',
+    'Asia/Kashgar': 'zh',
+    'PRC': 'zh',
+    'ROC': 'zh',
+    'Asia/Seoul': 'ko',
+    'ROK': 'ko',
+    'Asia/Tokyo': 'ja',
+    'Japan': 'ja'
+  };
+
+  return timezoneLanguageMap[getUserTimeZone()] || 'en';
 }
 
 let currentLang = detectInitialLanguage();
@@ -969,6 +990,7 @@ document.addEventListener('visibilitychange', () => {
 document.querySelectorAll('.lang-btn').forEach(button => {
   button.addEventListener('click', () => {
     currentLang = button.dataset.lang;
+    try { localStorage.setItem(LANGUAGE_KEY, currentLang); } catch (error) { /* ignore */ }
     applyLanguage();
   });
 });
@@ -992,7 +1014,7 @@ async function registerServiceWorker() {
     return null;
   }
   try {
-    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=34', { scope: './' });
+    swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js?v=34.2', { scope: './' });
     console.log('Service Worker registered:', swRegistration.scope);
     return swRegistration;
   } catch (error) {
